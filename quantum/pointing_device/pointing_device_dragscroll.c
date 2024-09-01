@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
+
 #include "pointing_device_dragscroll.h"
 
 /* implement a simple ring buffer for smoothing hires scrolling */
@@ -371,3 +373,5 @@ void dragscroll_axis_snapping_off_right(void) { dragscroll_axis_snapping_off_tas
 void dragscroll_axis_snapping_toggle_right(void) { dragscroll_axis_snapping_toggle_task(&dragscroll_state_right); }
 bool is_dragscroll_axis_snapping_on_right(void) { return is_dragscroll_axis_snapping_on_task(&dragscroll_state_right); }
 #endif
+
+#endif  // POINTING_DEVICE_DRAGSCROLL_ENABLE
