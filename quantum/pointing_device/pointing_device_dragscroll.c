@@ -16,6 +16,8 @@
 
 #ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
 
+#include <stdlib.h>
+#include "pointing_device.h"
 #include "pointing_device_dragscroll.h"
 
 /* implement a simple ring buffer for smoothing hires scrolling */

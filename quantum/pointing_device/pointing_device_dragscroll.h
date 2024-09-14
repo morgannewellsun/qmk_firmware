@@ -16,8 +16,6 @@
 
 #pragma once
 
-#include <stdlib.h>
-#include "pointing_device.h"
 #include "report.h"
 
 #ifndef POINTING_DEVICE_DRAGSCROLL_ENABLE
