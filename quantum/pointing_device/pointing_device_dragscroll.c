@@ -17,7 +17,9 @@
 #ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
 
 #include <stdlib.h>
-#include "pointing_device.h"
+#include "timer.h"
+#include "host_driver.h"
+#include "usb_descriptor_common.h"
 #include "pointing_device_dragscroll.h"
 
 /* implement a simple ring buffer for smoothing hires scrolling */
