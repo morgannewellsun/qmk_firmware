@@ -29,10 +29,6 @@
 #    include "usb_descriptor_common.h"
 #endif
 
-#ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
-#    include "pointing_device_dragscroll.h"
-#endif
-
 #if (defined(POINTING_DEVICE_ROTATION_90) + defined(POINTING_DEVICE_ROTATION_180) + defined(POINTING_DEVICE_ROTATION_270)) > 1
 #    error More than one rotation selected.  This is not supported.
 #endif
