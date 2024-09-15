@@ -20,6 +20,7 @@
 #include "timer.h"
 #include "host_driver.h"
 #include "usb_descriptor_common.h"
+#include "pointing_device.h"
 #include "pointing_device_dragscroll.h"
 
 /* implement a simple ring buffer for smoothing hires scrolling */
@@ -80,7 +81,6 @@ typedef struct {
 } dragscroll_state_t;
 
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-float hires_scroll_effective_resolution_multiplier;
 float hires_scroll_axis_snapping_threshold;
 #endif
 
@@ -127,8 +127,8 @@ static void dragscroll_accumulate_task(dragscroll_state_t* d, report_mouse_t* mo
     // scale hires scrolling so that hires and normal scrolling have the same speed
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
     if (is_hires_scroll_on()) {
-        delta_h = ((float)(mouse_report->x)) * DRAGSCROLL_MULTIPLIER_H * hires_scroll_effective_resolution_multiplier;
-        delta_v = ((float)(mouse_report->y)) * DRAGSCROLL_MULTIPLIER_V * hires_scroll_effective_resolution_multiplier;
+        delta_h = ((float)(mouse_report->x)) * DRAGSCROLL_MULTIPLIER_H * pointing_device_get_hires_scroll_resolution();
+        delta_v = ((float)(mouse_report->y)) * DRAGSCROLL_MULTIPLIER_V * pointing_device_get_hires_scroll_resolution();
     } else {
 #endif
         delta_h = ((float)(mouse_report->x)) * DRAGSCROLL_MULTIPLIER_H;
@@ -310,11 +310,7 @@ static bool is_dragscroll_axis_snapping_on_task(dragscroll_state_t* d) {
 
 void dragscroll_init(void) {
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-    hires_scroll_effective_resolution_multiplier = POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER;
-    for (int i = 0; i < POINTING_DEVICE_HIRES_SCROLL_EXPONENT; i++) {
-        hires_scroll_effective_resolution_multiplier *= 10;
-    }
-    hires_scroll_axis_snapping_threshold = DRAGSCROLL_AXIS_SNAPPING_THRESHOLD * hires_scroll_effective_resolution_multiplier;
+    hires_scroll_axis_snapping_threshold = DRAGSCROLL_AXIS_SNAPPING_THRESHOLD * pointing_device_get_hires_scroll_resolution();
     float* items_h = (float*)malloc(DRAGSCROLL_SMOOTHING_H * sizeof(float));
     float* items_v = (float*)malloc(DRAGSCROLL_SMOOTHING_V * sizeof(float));
     dragscroll_state.smoothing_buffer_h.items = items_h;
