@@ -4,7 +4,7 @@
 #include "rgb_engine.h"
 
 // ============================================================================
-// QMK: KEYMAP AND KEYCODES
+// QMK KEYMAP AND KEYCODES
 // ============================================================================
 
 enum keymap_layers {
@@ -40,7 +40,7 @@ enum custom_keycodes {
 };
 
 // ============================================================================
-// QMK: KEY OVERRIDES
+// QMK KEY OVERRIDES
 // ============================================================================
 
 const key_override_t *key_overrides[2];
@@ -101,7 +101,6 @@ enum mouse_triggerable_modifiers {
     MOUSE_TRIGGERABLE_MODIFIER_ALT = 0,
     MOUSE_TRIGGERABLE_MODIFIER_CTRL,
     MOUSE_TRIGGERABLE_MODIFIER_GUI,
-    N_MOUSE_TRIGGERABLE_MODIFERS,
 };
 
 // ============================================================================
@@ -109,10 +108,7 @@ enum mouse_triggerable_modifiers {
 // ============================================================================
 
 enum arrow_modifiers {
-    ARROW_MODIFIER_ALT = 0,
-    ARROW_MODIFIER_CTRL,
-    ARROW_MODIFIER_SHIFT,
-    ARROW_MODIFIER_SELECTIVE_ALT,
+    ARROW_MODIFIER_SELECTIVE_ALT = 0,
     ARROW_MODIFIER_SELECTIVE_CTRL,
     ARROW_MODIFIER_SELECTIVE_SHIFT,
     N_ARROW_MODIFIERS,
@@ -180,9 +176,9 @@ typedef struct keyboard_state_t {
     bool held_modifier_is_registered[N_HELD_MODIFIERS];
 
     // mouse passthrough
-    bool mouse_is_active;
-    uint8_t n_mouse_triggerable_modifiers_active;
-    bool mouse_triggerable_modifier_is_active[N_MOUSE_TRIGGERABLE_MODIFERS];
+    bool mouse_triggerable_modifier_is_active;
+    bool mouse_triggerable_modifier_is_triggered;
+    size_t active_mouse_triggerable_modifier;
 
     // arrows layer
     bool arrow_modifier_is_active[N_ARROW_MODIFIERS];

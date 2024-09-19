@@ -1,14 +1,14 @@
 #pragma once
 
 // ============================================================================
-// QMK: DISABLE FEATURES
+// QMK DISABLE FEATURES
 // ============================================================================
 
 #define NO_ACTION_TAPPING
 #define NO_ACTION_ONESHOT
 
 // ============================================================================
-// QMK: POINTING DEVICE
+// QMK POINTING DEVICE
 // ============================================================================
 
 #define MOUSE_EXTENDED_REPORT
@@ -17,6 +17,14 @@
 #define POINTING_DEVICE_HIRES_SCROLL_MULTIPLIER 120
 #define POINTING_DEVICE_HIRES_SCROLL_EXPONENT 1
 #define POINTING_DEVICE_DRAGSCROLL_ENABLE
+#define DRAGSCROLL_THROTTLE_MS 16
+#define DRAGSCROLL_TIMEOUT_MS 500
+#define DRAGSCROLL_MULTIPLIER_H 0.04
+#define DRAGSCROLL_MULTIPLIER_V -0.04
+#define DRAGSCROLL_SMOOTHING_H 5
+#define DRAGSCROLL_SMOOTHING_V 5
+#define DRAGSCROLL_AXIS_SNAPPING_THRESHOLD 0.25
+#define DRAGSCROLL_AXIS_SNAPPING_RATIO 2.0
 
 // ============================================================================
 // TAPPING TERMS

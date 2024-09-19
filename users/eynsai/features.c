@@ -11,39 +11,7 @@
 keyboard_state_t keyboard_state = {0};  // TODO refactor out all of the pointless pointers!
 
 // ============================================================================
-// QMK: USER CODE HOOKS
-// ============================================================================
-
-void keyboard_post_init_user(void) {
-    rgb_init_task(&(keyboard_state.rgb_state));
-}
-
-bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (keycode == QK_BOOT) {
-        return true;
-    }
-    // earlier intercepts can prevent later intercepts from being called
-    // earlier superkey interrupts can't prevent later superkey interrupts from being called
-    // intercepts can't prevent superkey interrupts from being called
-    bool continue_processing = true;
-    if (!intercept_process_record_task(keycode, record->event.pressed)) {
-        continue_processing = false;
-    }
-    if (!superkey_process_record_task(keycode, record->event.pressed)) {
-        continue_processing = false;
-    }
-    return continue_processing;
-}
-
-void matrix_scan_user(void) {
-    rgb_matrix_scan_task(&(keyboard_state.rgb_state));
-    superkey_matrix_scan_task();
-    timeout_matrix_scan_task();
-    mouse_passthrough_reciever_matrix_scan_task();
-}
-
-// ============================================================================
-// QMK: KEY OVERRIDES
+// QMK KEY OVERRIDES
 // ============================================================================
 
 const key_override_t key_override_9 = ko_make_basic(MOD_MASK_SHIFT, KC_9, KC_PIPE);
@@ -381,45 +349,6 @@ bool intercept_oneshots_cb(uint16_t keycode, bool pressed) {
 }
 
 // ============================================================================
-// HELD MODIFIERS
-// ============================================================================
-
-void held_modifier_on(size_t held_modifier) {
-    if (keyboard_state.held_modifier_is_registered[held_modifier]) {
-        return;
-    }
-    keyboard_state.held_modifier_is_registered[held_modifier] = true;
-    switch (held_modifier) {
-        case HELD_MODIFIER_ALT:
-            register_code(KC_LALT);
-            break;
-        case HELD_MODIFIER_CTRL:
-            register_code(KC_LCTL);
-            break;
-        case HELD_MODIFIER_GUI:
-            register_code(KC_LGUI);
-    }
-    // TODO RGB
-}
-
-void held_modifier_off(size_t held_modifier) {
-    if (!keyboard_state.held_modifier_is_registered[held_modifier]) {
-        return;
-    }
-    keyboard_state.held_modifier_is_registered[held_modifier] = false;
-    switch (held_modifier) {
-        case HELD_MODIFIER_ALT:
-            unregister_code(KC_LALT);
-            break;
-        case HELD_MODIFIER_CTRL:
-            unregister_code(KC_LCTL);
-            break;
-        case HELD_MODIFIER_GUI:
-            unregister_code(KC_LGUI);
-    }
-}
-
-// ============================================================================
 // MOUSE PASSTHROUGH
 // ============================================================================
 
@@ -435,18 +364,20 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
     mouse_report.x = 0;
     mouse_report.y = 0;
     if (mouse_report.buttons != 0 || mouse_report.v != 0 || mouse_report.h != 0) {
-        keyboard_state.mouse_is_active = true;
-        if (keyboard_state.mouse_triggerable_modifier_is_active[MOUSE_TRIGGERABLE_MODIFIER_ALT]) {
-            held_modifier_on(HELD_MODIFIER_ALT);
-            superkey_inject_interrupt(SK_ALT, CK_MOUSE_INTERRUPT);
-        }
-        if (keyboard_state.mouse_triggerable_modifier_is_active[MOUSE_TRIGGERABLE_MODIFIER_CTRL]) {
-            held_modifier_on(HELD_MODIFIER_CTRL);
-            superkey_inject_interrupt(SK_CTRL, CK_MOUSE_INTERRUPT);
-        }
-        if (keyboard_state.mouse_triggerable_modifier_is_active[MOUSE_TRIGGERABLE_MODIFIER_GUI]) {
-            held_modifier_on(HELD_MODIFIER_GUI);
-            superkey_inject_interrupt(SK_GUI, CK_MOUSE_INTERRUPT);
+        keyboard_state.mouse_triggerable_modifier_is_triggered = true;
+        switch (keyboard_state.active_mouse_triggerable_modifier) {
+            case MOUSE_TRIGGERABLE_MODIFIER_ALT:
+                register_code(KC_LALT);
+                superkey_inject_interrupt(SK_ALT, CK_MOUSE_INTERRUPT);
+                break;
+            case MOUSE_TRIGGERABLE_MODIFIER_CTRL:
+                register_code(KC_LCTL);
+                superkey_inject_interrupt(SK_CTRL, CK_MOUSE_INTERRUPT);
+                break;
+            case MOUSE_TRIGGERABLE_MODIFIER_GUI:
+                register_code(KC_LGUI);
+                superkey_inject_interrupt(SK_GUI, CK_MOUSE_INTERRUPT);
+                break;
         }
     }
     if (is_hires_scroll_on() && !is_dragscroll_on()) {
@@ -457,51 +388,40 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
 }
 
 void mouse_triggerable_modifier_on(size_t mouse_triggerable_modifier) {
-    if (keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier]) {
+    if (keyboard_state.mouse_triggerable_modifier_is_active) {
         return;
     }
-    if (keyboard_state.n_mouse_triggerable_modifiers_active == 0) {
-        mouse_passthrough_send_buttons_on();
-        mouse_passthrough_block_buttons_on();
-        mouse_passthrough_send_wheel_on();
-        mouse_passthrough_block_wheel_on();
-    }
-    keyboard_state.n_mouse_triggerable_modifiers_active++;
-    keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier] = true;
-    if (keyboard_state.mouse_is_active) {
-        switch (mouse_triggerable_modifier) {
-            case MOUSE_TRIGGERABLE_MODIFIER_ALT:
-                held_modifier_on(HELD_MODIFIER_ALT);
-                superkey_inject_interrupt(SK_ALT, CK_MOUSE_INTERRUPT);
-                break;
-            case MOUSE_TRIGGERABLE_MODIFIER_CTRL:
-                held_modifier_on(HELD_MODIFIER_CTRL);
-                superkey_inject_interrupt(SK_CTRL, CK_MOUSE_INTERRUPT);
-                break;
-            case MOUSE_TRIGGERABLE_MODIFIER_GUI:
-                held_modifier_on(HELD_MODIFIER_GUI);
-                superkey_inject_interrupt(SK_GUI, CK_MOUSE_INTERRUPT);
-                break;
-        }
-    }
+    keyboard_state.mouse_triggerable_modifier_is_active = true;
+    keyboard_state.mouse_triggerable_modifier_is_triggered = false;
+    mouse_passthrough_send_buttons_on();
+    mouse_passthrough_block_buttons_on();
+    mouse_passthrough_send_wheel_on();
+    mouse_passthrough_block_wheel_on();
 }
 
-void mouse_triggerable_modifier_off(size_t mouse_triggerable_modifier) {
-    // held modifiers should be turned off separately after this is called
-    if (!keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier]) {
+void mouse_triggerable_modifier_off(void) {
+    if (!keyboard_state.mouse_triggerable_modifier_is_active) {
         return;
     }
-    keyboard_state.n_mouse_triggerable_modifiers_active--;
-    keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier] = false;
-    if (keyboard_state.n_mouse_triggerable_modifiers_active == 0) {
-        mouse_passthrough_send_buttons_off();
-        mouse_passthrough_block_buttons_off();
-        mouse_passthrough_send_wheel_off();
-        mouse_passthrough_block_wheel_off();
-        if (keyboard_state.mouse_is_active) {
-            keyboard_state.mouse_is_active = false;
+    if (keyboard_state.mouse_triggerable_modifier_is_triggered) {
+        switch (keyboard_state.active_mouse_triggerable_modifier) {
+            case MOUSE_TRIGGERABLE_MODIFIER_ALT:
+                unregister_code(KC_LALT);
+                break;
+            case MOUSE_TRIGGERABLE_MODIFIER_CTRL:
+                unregister_code(KC_LCTL);
+                break;
+            case MOUSE_TRIGGERABLE_MODIFIER_GUI:
+                unregister_code(KC_LGUI);
+                break;
         }
     }
+    keyboard_state.mouse_triggerable_modifier_is_active = false;
+    keyboard_state.mouse_triggerable_modifier_is_triggered = false;
+    mouse_passthrough_send_buttons_off();
+    mouse_passthrough_block_buttons_off();
+    mouse_passthrough_send_wheel_off();
+    mouse_passthrough_block_wheel_off();
 }
 
 // ============================================================================
@@ -513,8 +433,11 @@ void mouse_triggerable_modifier_off(size_t mouse_triggerable_modifier) {
 
 void utilities_oneshot_on_task(void) {
     mouse_passthrough_send_buttons_on();
+    mouse_passthrough_block_buttons_on();
     mouse_passthrough_send_pointer_on();
+    mouse_passthrough_block_pointer_on();
     mouse_passthrough_send_wheel_on();
+    mouse_passthrough_block_wheel_on();
     dragscroll_on();
     layer_on(LAYER_UTILITIES);
     intercept_on(INTERCEPT_UTILITIES_ONESHOT);
@@ -524,8 +447,11 @@ void utilities_oneshot_on_task(void) {
 
 void utilities_oneshot_off_task(void) {
     mouse_passthrough_send_buttons_off();
+    mouse_passthrough_block_buttons_off();
     mouse_passthrough_send_pointer_off();
+    mouse_passthrough_block_pointer_off();
     mouse_passthrough_send_wheel_off();
+    mouse_passthrough_block_wheel_off();
     dragscroll_off();
     layer_off(LAYER_UTILITIES);
     intercept_off(INTERCEPT_UTILITIES_ONESHOT);
@@ -548,8 +474,6 @@ void sk_ctrl_down_cb(superkey_state_t* superkey_state) {
 }
 
 void sk_ctrl_up_cb(superkey_state_t* superkey_state) {
-    mouse_triggerable_modifier_off(MOUSE_TRIGGERABLE_MODIFIER_CTRL);
-    held_modifier_off(HELD_MODIFIER_CTRL);
     if (keyboard_state.utilities_momentary_mode_is_on) {
         layer_off(LAYER_UTILITIES);
     } else {
@@ -733,8 +657,6 @@ void sk_alt_down_cb(superkey_state_t* superkey_state) {
 }
 
 void sk_alt_up_cb(superkey_state_t* superkey_state) {
-    mouse_triggerable_modifier_off(MOUSE_TRIGGERABLE_MODIFIER_ALT);
-    held_modifier_off(HELD_MODIFIER_ALT);
     layer_off(LAYER_ARROWS);
     intercept_off(INTERCEPT_ARROWS);
 
@@ -896,13 +818,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else {
                 keycode = KC_RIGHT;
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_ALT]) {
-                keycode = A(keycode);
-            }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_CTRL] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]) {
                 keycode = C(keycode);
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                 keycode = S(keycode);
             }
             register_code16(keycode);
@@ -919,13 +838,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else {
                 keycode = KC_DOWN;
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_ALT] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]) {
                 keycode = A(keycode);
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_CTRL]) {
-                keycode = C(keycode);
-            }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                 keycode = S(keycode);
             }
             register_code16(keycode);
@@ -948,8 +864,6 @@ void sk_gui_down_cb(superkey_state_t* superkey_state) {
 }
 
 void sk_gui_up_cb(superkey_state_t* superkey_state) {
-    mouse_triggerable_modifier_off(MOUSE_TRIGGERABLE_MODIFIER_GUI);
-    held_modifier_off(HELD_MODIFIER_GUI);
     layer_off(LAYER_FUNCTION);
 
     // activate/deactivate oneshot if the key was tapped
@@ -1003,3 +917,36 @@ timeout_t timeouts[] = {
     TIMEOUT_DEFINE(TIMEOUT_UTILITIES_ONESHOT,   &timeout_utilities_oneshot_cb,  DEFAULT_MULTITAP_TERM),
 };
 const size_t n_timeouts = sizeof(timeouts) / sizeof(timeout_t);
+
+// ============================================================================
+// QMK USER CODE HOOKS
+// ============================================================================
+
+void keyboard_post_init_user(void) {
+    rgb_init_task(&(keyboard_state.rgb_state));
+}
+
+bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (keycode == QK_BOOT) {
+        reset_keyboard();
+    }
+    mouse_triggerable_modifier_off();
+    // earlier intercepts can prevent later intercepts from being called
+    // earlier superkey interrupts can't prevent later superkey interrupts from being called
+    // intercepts can't prevent superkey interrupts from being called
+    bool continue_processing = true;
+    if (!intercept_process_record_task(keycode, record->event.pressed)) {
+        continue_processing = false;
+    }
+    if (!superkey_process_record_task(keycode, record->event.pressed)) {
+        continue_processing = false;
+    }
+    return continue_processing;
+}
+
+void matrix_scan_user(void) {
+    rgb_matrix_scan_task(&(keyboard_state.rgb_state));
+    superkey_matrix_scan_task();
+    timeout_matrix_scan_task();
+    mouse_passthrough_reciever_matrix_scan_task();
+}
