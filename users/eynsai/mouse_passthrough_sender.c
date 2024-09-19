@@ -12,14 +12,15 @@ uint32_t last_connection_success_time;
 uint8_t message_queue[QMK_RAW_HID_REPORT_SIZE * MAX_QUEUED_MESSAGES];
 uint8_t message_queue_next_empty_offset = 0;
 
-static uint8_t current_buttons_state = 0;
 static uint8_t last_buttons_sent = 0;
-static uint8_t lingering_buttons_host = 0;
-static uint8_t lingering_buttons_remote = 0;
 static bool block_buttons_on = false;
+static bool block_buttons_on_queued = false;
 static bool block_pointer_on = false;
 static bool block_wheel_on = false;
-static bool passthrough_on = false;
+static bool send_buttons_on = false;
+static bool send_buttons_off_queued = false;
+static bool send_pointer_on = false;
+static bool send_wheel_on = false;
 
 void mouse_passthrough_sender_matrix_scan_task(void) {
 
@@ -74,16 +75,29 @@ bool mouse_passthrough_sender_raw_hid_receive_task(uint8_t* data) {
 
     if (state == MOUSE_PASSTHROUGH_REMOTE_CONNECTED && data[REPORT_OFFSET_DEVICE_ID] == device_id_remote) {
         // unpack control payload
-        if (!block_buttons_on && data[REPORT_OFFSET_CONTROL_BLOCK_BUTTONS]) {
-            lingering_buttons_host = current_buttons_state;
+        if (data[REPORT_OFFSET_RESET] > 0) {
+            reset_keyboard();
         }
-        if (passthrough_on && !data[REPORT_OFFSET_CONTROL_PASSTHROUGH]) {
-            lingering_buttons_remote = current_buttons_state;
+        if (data[REPORT_OFFSET_CONTROL_BLOCK_BUTTONS] > 0) {
+            if (!block_buttons_on) {
+                block_buttons_on_queued = true;
+            }
+        } else {
+            block_buttons_on = false;
+            block_buttons_on_queued = false;
         }
-        block_buttons_on = data[REPORT_OFFSET_CONTROL_BLOCK_BUTTONS];
+        if (data[REPORT_OFFSET_CONTROL_SEND_BUTTONS] == 0) {
+            if (send_buttons_on) {
+                send_buttons_off_queued = true;
+            }
+        } else {
+            send_buttons_on = true;
+            send_buttons_off_queued = false;
+        }
         block_pointer_on = data[REPORT_OFFSET_CONTROL_BLOCK_POINTER];
         block_wheel_on = data[REPORT_OFFSET_CONTROL_BLOCK_WHEEL];
-        passthrough_on = data[REPORT_OFFSET_CONTROL_PASSTHROUGH];
+        send_pointer_on = data[REPORT_OFFSET_CONTROL_SEND_POINTER];
+        send_wheel_on = data[REPORT_OFFSET_CONTROL_SEND_WHEEL];
 
     } else if (data[REPORT_OFFSET_DEVICE_ID] == DEVICE_ID_HUB) {
         if (data[REPORT_OFFSET_DEVICE_ID_SELF] == DEVICE_ID_UNASSIGNED) {
@@ -118,9 +132,13 @@ bool mouse_passthrough_sender_raw_hid_receive_task(uint8_t* data) {
             message_queue[message_queue_next_empty_offset + REPORT_OFFSET_HANDSHAKE] = 39;
             message_queue_next_empty_offset += QMK_RAW_HID_REPORT_SIZE;
             block_buttons_on = false;
+            block_buttons_on_queued = false;
             block_pointer_on = false;
             block_wheel_on = false;
-            passthrough_on = false;
+            send_buttons_on = false;
+            send_buttons_off_queued = false;
+            send_pointer_on = false;
+            send_wheel_on = false;
         }
     }
 
@@ -128,46 +146,41 @@ bool mouse_passthrough_sender_raw_hid_receive_task(uint8_t* data) {
 }
 
 report_mouse_t mouse_passthrough_sender_pointing_device_task(report_mouse_t mouse) {
-    current_buttons_state = mouse.buttons;
     
     if (state != MOUSE_PASSTHROUGH_REMOTE_CONNECTED) {
         return mouse;
     }
 
-    if (passthrough_on) {
-        if (((mouse.buttons != last_buttons_sent) || (mouse.x != 0) || (mouse.y != 0) || (mouse.v != 0) || (mouse.h != 0)) && (message_queue_next_empty_offset < sizeof(message_queue))) {
-            // send data payload
-            memset(message_queue + message_queue_next_empty_offset, 0, QMK_RAW_HID_REPORT_SIZE);
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_COMMAND_ID] = RAW_HID_HUB_COMMAND_ID;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DEVICE_ID] = device_id_remote;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_BUTTONS] = mouse.buttons;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_X_MSB] = (mouse.x >> 8) & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_X_LSB] = mouse.x & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_Y_MSB] = (mouse.y >> 8) & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_Y_LSB] = mouse.y & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_V_MSB] = (mouse.v >> 8) & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_V_LSB] = mouse.v & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_H_MSB] = (mouse.h >> 8) & 0xFF;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_H_LSB] = mouse.h & 0xFF;
-            message_queue_next_empty_offset += QMK_RAW_HID_REPORT_SIZE;
-            last_buttons_sent = mouse.buttons;
-        }
-    } else {
-        lingering_buttons_remote &= mouse.buttons;
-        if ((lingering_buttons_remote != last_buttons_sent) && (message_queue_next_empty_offset < sizeof(message_queue))) {
-            memset(message_queue + message_queue_next_empty_offset, 0, QMK_RAW_HID_REPORT_SIZE);
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_COMMAND_ID] = RAW_HID_HUB_COMMAND_ID;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DEVICE_ID] = device_id_remote;
-            message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_BUTTONS] = lingering_buttons_remote;
-            message_queue_next_empty_offset += QMK_RAW_HID_REPORT_SIZE;
-            last_buttons_sent = lingering_buttons_remote;
-        }
+    if (block_buttons_on_queued && mouse.buttons == 0) {
+        block_buttons_on = true;
+        block_buttons_on_queued = false;
+    }
+    if (send_buttons_off_queued && mouse.buttons == 0) {
+        send_buttons_on = false;
+        send_buttons_off_queued = false;
+    }
+
+    // send data payload
+    if (((send_buttons_on && (mouse.buttons != last_buttons_sent)) || (send_pointer_on && ((mouse.x != 0) || (mouse.y != 0))) || (send_wheel_on && ((mouse.v != 0) || (mouse.h != 0)))) && (message_queue_next_empty_offset < sizeof(message_queue))) {
+        memset(message_queue + message_queue_next_empty_offset, 0, QMK_RAW_HID_REPORT_SIZE);
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_COMMAND_ID] = RAW_HID_HUB_COMMAND_ID;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DEVICE_ID] = device_id_remote;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_BUTTONS] = mouse.buttons;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_X_MSB] = (mouse.x >> 8) & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_X_LSB] = mouse.x & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_Y_MSB] = (mouse.y >> 8) & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_Y_LSB] = mouse.y & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_V_MSB] = (mouse.v >> 8) & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_V_LSB] = mouse.v & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_H_MSB] = (mouse.h >> 8) & 0xFF;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DATA_H_LSB] = mouse.h & 0xFF;
+        message_queue_next_empty_offset += QMK_RAW_HID_REPORT_SIZE;
+        last_buttons_sent = mouse.buttons;
     }
 
     // block inputs
     if (block_buttons_on) {
-        lingering_buttons_host &= mouse.buttons;
-        mouse.buttons = lingering_buttons_host;
+        mouse.buttons = 0;
     }
     if (block_pointer_on) {
         mouse.x = 0;

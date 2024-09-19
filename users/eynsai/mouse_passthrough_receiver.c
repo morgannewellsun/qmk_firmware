@@ -1,8 +1,8 @@
 #include QMK_KEYBOARD_H
 #include "raw_hid.h"
 #include "report.h"
-#include "include/mouse_passthrough_common.h"
-#include "include/mouse_passthrough_receiver.h"
+#include "mouse_passthrough_common.h"
+#include "mouse_passthrough_receiver.h"
 
 static uint8_t state = MOUSE_PASSTHROUGH_DISCONNECTED;
 static uint8_t device_id_self;
@@ -16,7 +16,9 @@ static uint8_t message_queue_next_empty_offset = 0;
 static bool block_buttons_on = false;
 static bool block_pointer_on = false;
 static bool block_wheel_on = false;
-static bool passthrough_on = false;
+static bool send_buttons_on = false;
+static bool send_pointer_on = false;
+static bool send_wheel_on = false;
 static bool control_state_changed = false;
 
 static report_mouse_t accumulated_mouse_report = {0};
@@ -35,7 +37,9 @@ void mouse_passthrough_reciever_matrix_scan_task(void) {
         message_queue[REPORT_OFFSET_CONTROL_BLOCK_BUTTONS] = block_buttons_on ? 1 : 0;
         message_queue[REPORT_OFFSET_CONTROL_BLOCK_POINTER] = block_pointer_on ? 1 : 0;
         message_queue[REPORT_OFFSET_CONTROL_BLOCK_WHEEL] = block_wheel_on ? 1 : 0;
-        message_queue[REPORT_OFFSET_CONTROL_PASSTHROUGH] = passthrough_on ? 1 : 0;
+        message_queue[REPORT_OFFSET_CONTROL_SEND_BUTTONS] = send_buttons_on ? 1 : 0;
+        message_queue[REPORT_OFFSET_CONTROL_SEND_POINTER] = send_pointer_on ? 1 : 0;
+        message_queue[REPORT_OFFSET_CONTROL_SEND_WHEEL] = send_wheel_on ? 1 : 0;
         raw_hid_send(message_queue, QMK_RAW_HID_REPORT_SIZE);
         control_state_changed = false;
     }
@@ -174,16 +178,39 @@ void mouse_passthrough_block_wheel_off(void) {
     }
 }
 
-void mouse_passthrough_on(void) {
-    if (!passthrough_on) {
-        passthrough_on = true;
+void mouse_passthrough_send_buttons_on(void) {
+    if (!send_buttons_on) {
+        send_buttons_on = true;
         control_state_changed = true;
     }
 }
-
-void mouse_passthrough_off(void) {
-    if (passthrough_on) {
-        passthrough_on = false;
+void mouse_passthrough_send_buttons_off(void) {
+    if (send_buttons_on) {
+        send_buttons_on = false;
+        control_state_changed = true;
+    }
+}
+void mouse_passthrough_send_pointer_on(void) {
+    if (!send_pointer_on) {
+        send_pointer_on = true;
+        control_state_changed = true;
+    }
+}
+void mouse_passthrough_send_pointer_off(void) {
+    if (send_pointer_on) {
+        send_pointer_on = false;
+        control_state_changed = true;
+    }
+}
+void mouse_passthrough_send_wheel_on(void) {
+    if (!send_wheel_on) {
+        send_wheel_on = true;
+        control_state_changed = true;
+    }
+}
+void mouse_passthrough_send_wheel_off(void) {
+    if (send_wheel_on) {
+        send_wheel_on = false;
         control_state_changed = true;
     }
 }

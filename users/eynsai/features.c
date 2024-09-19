@@ -1,11 +1,12 @@
+#include "quantum.h"
 #include "raw_hid.h"
 #include "host_driver.h"
 #include "pointing_device.h"
-#include "include/features.h"
-#include "include/intercepts.h"
-#include "include/mouse_passthrough_receiver.h"
-#include "include/superkeys.h"
-#include "include/timeouts.h"
+#include "features.h"
+#include "intercepts.h"
+#include "mouse_passthrough_receiver.h"
+#include "superkeys.h"
+#include "timeouts.h"
 
 keyboard_state_t keyboard_state = {0};  // TODO refactor out all of the pointless pointers!
 
@@ -25,10 +26,10 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     // earlier superkey interrupts can't prevent later superkey interrupts from being called
     // intercepts can't prevent superkey interrupts from being called
     bool continue_processing = true;
-    if (!intercept_process_record_task(&keyboard_state, keycode, record->event.pressed)) {
+    if (!intercept_process_record_task(keycode, record->event.pressed)) {
         continue_processing = false;
     }
-    if (!superkey_process_record_task(&keyboard_state, keycode, record->event.pressed)) {
+    if (!superkey_process_record_task(keycode, record->event.pressed)) {
         continue_processing = false;
     }
     return continue_processing;
@@ -36,8 +37,8 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
 
 void matrix_scan_user(void) {
     rgb_matrix_scan_task(&(keyboard_state.rgb_state));
-    superkey_matrix_scan_task(&keyboard_state);
-    timeout_matrix_scan_task(&keyboard_state);
+    superkey_matrix_scan_task();
+    timeout_matrix_scan_task();
     mouse_passthrough_reciever_matrix_scan_task();
 }
 
@@ -191,80 +192,80 @@ rgb_animation_t rgb_animations[] = {
         .loop_stop_idx  = 2},
 };
 
-void rgb_oneshot_on_task(keyboard_state_t* keyboard_state, uint8_t oneshot) {
-    if (keyboard_state->n_oneshots_active == 0) {
+void rgb_oneshot_on_task(size_t oneshot) {
+    if (keyboard_state.n_oneshots_active == 0) {
         // first oneshot on
         switch (oneshot) {
             case ONESHOT_ALT:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_ALT_FIRST_ON);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_ALT_FIRST_ON);
                 break;
             case ONESHOT_CTRL:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_CTRL_FIRST_ON);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_CTRL_FIRST_ON);
                 break;
             case ONESHOT_GUI:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_GUI_FIRST_ON);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_GUI_FIRST_ON);
                 break;
         }
     } else {
         switch (oneshot) {
             case ONESHOT_ALT:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_ALT_EXTRA_ON);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_ALT_EXTRA_ON);
                 break;
             case ONESHOT_CTRL:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_CTRL_EXTRA_ON);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_CTRL_EXTRA_ON);
                 break;
             case ONESHOT_GUI:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_GUI_EXTRA_ON);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_GUI_EXTRA_ON);
                 break;
         }
     }
 }
 
-void rgb_oneshots_off_task(keyboard_state_t* keyboard_state) {
-    if (keyboard_state->n_oneshots_active == 1) {
-        switch (keyboard_state->last_oneshot_active) {
+void rgb_oneshots_off_task(void) {
+    if (keyboard_state.n_oneshots_active == 1) {
+        switch (keyboard_state.last_oneshot_active) {
             case ONESHOT_ALT:
-                switch (keyboard_state->current_base_layer) {
+                switch (keyboard_state.current_base_layer) {
                     case LAYER_BASE_WORKMAN:
-                        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_ALT_OFF_BASE_WORKMAN);
+                        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_ALT_OFF_BASE_WORKMAN);
                         break;
                     case LAYER_BASE_QWERTY:
                     case LAYER_BASE_GAMING:
-                        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_ALT_OFF_BASE_OTHER);
+                        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_ALT_OFF_BASE_OTHER);
                         break;
                 }
                 break;
             case ONESHOT_CTRL:
-                switch (keyboard_state->current_base_layer) {
+                switch (keyboard_state.current_base_layer) {
                     case LAYER_BASE_WORKMAN:
-                        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_CTRL_OFF_BASE_WORKMAN);
+                        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_CTRL_OFF_BASE_WORKMAN);
                         break;
                     case LAYER_BASE_QWERTY:
                     case LAYER_BASE_GAMING:
-                        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_CTRL_OFF_BASE_OTHER);
+                        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_CTRL_OFF_BASE_OTHER);
                         break;
                 }
                 break;
             case ONESHOT_GUI:
-                switch (keyboard_state->current_base_layer) {
+                switch (keyboard_state.current_base_layer) {
                     case LAYER_BASE_WORKMAN:
-                        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_GUI_OFF_BASE_WORKMAN);
+                        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_GUI_OFF_BASE_WORKMAN);
                         break;
                     case LAYER_BASE_QWERTY:
                     case LAYER_BASE_GAMING:
-                        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_GUI_OFF_BASE_OTHER);
+                        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_GUI_OFF_BASE_OTHER);
                         break;
                 }
                 break;
         }
     } else {
-        switch (keyboard_state->current_base_layer) {
+        switch (keyboard_state.current_base_layer) {
             case LAYER_BASE_WORKMAN:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_MULTIPLE_OFF_BASE_WORKMAN);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_MULTIPLE_OFF_BASE_WORKMAN);
                 break;
             case LAYER_BASE_QWERTY:
             case LAYER_BASE_GAMING:
-                rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_ONESHOT_MULTIPLE_OFF_BASE_OTHER);
+                rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_ONESHOT_MULTIPLE_OFF_BASE_OTHER);
                 break;
         }
     }
@@ -274,41 +275,41 @@ void rgb_oneshots_off_task(keyboard_state_t* keyboard_state) {
 // BASE LAYER SWITCHING
 // ============================================================================
 
-void sk_base_down_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    if (keyboard_state->current_base_layer == LAYER_BASE_WORKMAN) {
-        keyboard_state->base_is_locked = false;
-    } else if (keyboard_state->current_base_layer == LAYER_BASE_QWERTY) {
-        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_BASE_QWERTY_TO_WORKMAN);
-        keyboard_state->current_base_layer = LAYER_BASE_WORKMAN;
-        keyboard_state->base_is_locked = true;
+void sk_base_down_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.current_base_layer == LAYER_BASE_WORKMAN) {
+        keyboard_state.base_is_locked = false;
+    } else if (keyboard_state.current_base_layer == LAYER_BASE_QWERTY) {
+        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_BASE_QWERTY_TO_WORKMAN);
+        keyboard_state.current_base_layer = LAYER_BASE_WORKMAN;
+        keyboard_state.base_is_locked = true;
         layer_off(LAYER_BASE_QWERTY);
-    } else if (keyboard_state->current_base_layer == LAYER_BASE_GAMING) {
-        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_BASE_GAMING_TO_WORKMAN);
-        keyboard_state->current_base_layer = LAYER_BASE_WORKMAN;
-        keyboard_state->base_is_locked = true;
+    } else if (keyboard_state.current_base_layer == LAYER_BASE_GAMING) {
+        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_BASE_GAMING_TO_WORKMAN);
+        keyboard_state.current_base_layer = LAYER_BASE_WORKMAN;
+        keyboard_state.base_is_locked = true;
         layer_off(LAYER_BASE_GAMING);
     }
 }
 
-void sk_base_up_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    if (keyboard_state->base_is_locked) {
+void sk_base_up_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.base_is_locked) {
         return;
-    } else if (keyboard_state->current_base_layer == LAYER_BASE_WORKMAN) {
+    } else if (keyboard_state.current_base_layer == LAYER_BASE_WORKMAN) {
         if (superkey_state->timeout_result == NO_TIMEOUT) {
-            rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_BASE_QWERTY_FROM_WORKMAN);
-            keyboard_state->current_base_layer = LAYER_BASE_QWERTY;
+            rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_BASE_QWERTY_FROM_WORKMAN);
+            keyboard_state.current_base_layer = LAYER_BASE_QWERTY;
             layer_on(LAYER_BASE_QWERTY);
         }
     }
 }
 
-void sk_base_timeout_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    if (keyboard_state->base_is_locked) {
+void sk_base_timeout_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.base_is_locked) {
         return;
-    } else if (keyboard_state->current_base_layer == LAYER_BASE_WORKMAN) {
-        rgb_start_animation(&(keyboard_state->rgb_state), RGB_ANIMATION_BASE_GAMING_FROM_WORKMAN);
-        keyboard_state->current_base_layer = LAYER_BASE_GAMING;
-        keyboard_state->base_is_locked = true;
+    } else if (keyboard_state.current_base_layer == LAYER_BASE_WORKMAN) {
+        rgb_start_animation(&(keyboard_state.rgb_state), RGB_ANIMATION_BASE_GAMING_FROM_WORKMAN);
+        keyboard_state.current_base_layer = LAYER_BASE_GAMING;
+        keyboard_state.base_is_locked = true;
         layer_on(LAYER_BASE_GAMING);
     }
 }
@@ -317,11 +318,11 @@ void sk_base_timeout_cb(keyboard_state_t* keyboard_state, superkey_state_t* supe
 // EXTRA SYMBOLS
 // ============================================================================
 
-void sk_symb_down_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
+void sk_symb_down_cb(superkey_state_t* superkey_state) {
     layer_on(LAYER_SYMBOLS);
 }
 
-void sk_symb_up_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
+void sk_symb_up_cb(superkey_state_t* superkey_state) {
     layer_off(LAYER_SYMBOLS);
 }
 
@@ -329,24 +330,24 @@ void sk_symb_up_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_
 // ONESHOT MODIFIERS
 // ============================================================================
 
-void oneshot_on_task(keyboard_state_t* keyboard_state, uint8_t oneshot) {
-    rgb_oneshot_on_task(keyboard_state, oneshot);
-    if (keyboard_state->n_oneshots_active == 0) {
+void oneshot_on_task(size_t oneshot) {
+    rgb_oneshot_on_task(oneshot);
+    if (keyboard_state.n_oneshots_active == 0) {
         intercept_on(INTERCEPT_ONESHOTS);
     }
-    keyboard_state->n_oneshots_active++;
-    keyboard_state->last_oneshot_active = oneshot;
-    keyboard_state->oneshot_is_active[oneshot] = true;
+    keyboard_state.n_oneshots_active++;
+    keyboard_state.last_oneshot_active = oneshot;
+    keyboard_state.oneshot_is_active[oneshot] = true;
 }
 
-void oneshots_off_task(keyboard_state_t* keyboard_state) {
-    rgb_oneshots_off_task(keyboard_state);
+void oneshots_off_task(void) {
+    rgb_oneshots_off_task();
     intercept_off(INTERCEPT_ONESHOTS);
-    keyboard_state->n_oneshots_active = 0;
-    memset(keyboard_state->oneshot_is_active, 0, sizeof(keyboard_state->oneshot_is_active));
+    keyboard_state.n_oneshots_active = 0;
+    memset(keyboard_state.oneshot_is_active, 0, sizeof(keyboard_state.oneshot_is_active));
 }
 
-bool intercept_oneshots_cb(keyboard_state_t* keyboard_state, uint16_t keycode, bool pressed) {
+bool intercept_oneshots_cb(uint16_t keycode, bool pressed) {
 
     // only apply oneshot to simple keycodes
     if (keycode < KC_A || keycode > KC_EXSEL || !pressed) {
@@ -355,7 +356,7 @@ bool intercept_oneshots_cb(keyboard_state_t* keyboard_state, uint16_t keycode, b
 
     // collect and apply modifiers
     for (int i = 0; i < N_ONESHOTS; i++) {
-        if (keyboard_state->oneshot_is_active[i]) {
+        if (keyboard_state.oneshot_is_active[i]) {
             switch (i) {
                 case ONESHOT_ALT:
                     keycode = A(keycode);
@@ -372,10 +373,10 @@ bool intercept_oneshots_cb(keyboard_state_t* keyboard_state, uint16_t keycode, b
     tap_code16(keycode);
 
     // turn oneshots off
-    rgb_oneshots_off_task(keyboard_state);
+    rgb_oneshots_off_task();
     intercept_off(INTERCEPT_ONESHOTS);
-    keyboard_state->n_oneshots_active = 0;
-    memset(keyboard_state->oneshot_is_active, 0, sizeof(keyboard_state->oneshot_is_active));
+    keyboard_state.n_oneshots_active = 0;
+    memset(keyboard_state.oneshot_is_active, 0, sizeof(keyboard_state.oneshot_is_active));
     return false;
 }
 
@@ -383,11 +384,11 @@ bool intercept_oneshots_cb(keyboard_state_t* keyboard_state, uint16_t keycode, b
 // HELD MODIFIERS
 // ============================================================================
 
-void held_modifier_on(keyboard_state_t* keyboard_state, uint8_t held_modifier) {
-    if (keyboard_state->held_modifier_is_registered[held_modifier]) {
+void held_modifier_on(size_t held_modifier) {
+    if (keyboard_state.held_modifier_is_registered[held_modifier]) {
         return;
     }
-    keyboard_state->held_modifier_is_registered[held_modifier] = true;
+    keyboard_state.held_modifier_is_registered[held_modifier] = true;
     switch (held_modifier) {
         case HELD_MODIFIER_ALT:
             register_code(KC_LALT);
@@ -401,11 +402,11 @@ void held_modifier_on(keyboard_state_t* keyboard_state, uint8_t held_modifier) {
     // TODO RGB
 }
 
-void held_modifier_off(keyboard_state_t* keyboard_state, uint8_t held_modifier) {
-    if (!keyboard_state->held_modifier_is_registered[held_modifier]) {
+void held_modifier_off(size_t held_modifier) {
+    if (!keyboard_state.held_modifier_is_registered[held_modifier]) {
         return;
     }
-    keyboard_state->held_modifier_is_registered[held_modifier] = false;
+    keyboard_state.held_modifier_is_registered[held_modifier] = false;
     switch (held_modifier) {
         case HELD_MODIFIER_ALT:
             unregister_code(KC_LALT);
@@ -436,16 +437,16 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
     if (mouse_report.buttons != 0 || mouse_report.v != 0 || mouse_report.h != 0) {
         keyboard_state.mouse_is_active = true;
         if (keyboard_state.mouse_triggerable_modifier_is_active[MOUSE_TRIGGERABLE_MODIFIER_ALT]) {
-            held_modifier_on(&keyboard_state, HELD_MODIFIER_ALT);
-            superkey_inject_interrupt(&keyboard_state, SK_ALT, CK_MOUSE_INTERRUPT);
+            held_modifier_on(HELD_MODIFIER_ALT);
+            superkey_inject_interrupt(SK_ALT, CK_MOUSE_INTERRUPT);
         }
         if (keyboard_state.mouse_triggerable_modifier_is_active[MOUSE_TRIGGERABLE_MODIFIER_CTRL]) {
-            held_modifier_on(&keyboard_state, HELD_MODIFIER_CTRL);
-            superkey_inject_interrupt(&keyboard_state, SK_CTRL, CK_MOUSE_INTERRUPT);
+            held_modifier_on(HELD_MODIFIER_CTRL);
+            superkey_inject_interrupt(SK_CTRL, CK_MOUSE_INTERRUPT);
         }
         if (keyboard_state.mouse_triggerable_modifier_is_active[MOUSE_TRIGGERABLE_MODIFIER_GUI]) {
-            held_modifier_on(&keyboard_state, HELD_MODIFIER_GUI);
-            superkey_inject_interrupt(&keyboard_state, SK_GUI, CK_MOUSE_INTERRUPT);
+            held_modifier_on(HELD_MODIFIER_GUI);
+            superkey_inject_interrupt(SK_GUI, CK_MOUSE_INTERRUPT);
         }
     }
     if (is_hires_scroll_on() && !is_dragscroll_on()) {
@@ -455,48 +456,50 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
     return mouse_report;
 }
 
-void mouse_triggerable_modifier_on(keyboard_state_t* keyboard_state, uint8_t mouse_triggerable_modifier) {
-    if (keyboard_state->mouse_triggerable_modifier_is_active[mouse_triggerable_modifier]) {
+void mouse_triggerable_modifier_on(size_t mouse_triggerable_modifier) {
+    if (keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier]) {
         return;
     }
-    if (keyboard_state->n_mouse_triggerable_modifiers_active == 0) {
-        mouse_passthrough_on();
+    if (keyboard_state.n_mouse_triggerable_modifiers_active == 0) {
+        mouse_passthrough_send_buttons_on();
         mouse_passthrough_block_buttons_on();
+        mouse_passthrough_send_wheel_on();
         mouse_passthrough_block_wheel_on();
     }
-    keyboard_state->n_mouse_triggerable_modifiers_active++;
-    keyboard_state->mouse_triggerable_modifier_is_active[mouse_triggerable_modifier] = true;
-    if (keyboard_state->mouse_is_active) {
+    keyboard_state.n_mouse_triggerable_modifiers_active++;
+    keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier] = true;
+    if (keyboard_state.mouse_is_active) {
         switch (mouse_triggerable_modifier) {
             case MOUSE_TRIGGERABLE_MODIFIER_ALT:
-                held_modifier_on(keyboard_state, HELD_MODIFIER_ALT);
-                superkey_inject_interrupt(keyboard_state, SK_ALT, CK_MOUSE_INTERRUPT);
+                held_modifier_on(HELD_MODIFIER_ALT);
+                superkey_inject_interrupt(SK_ALT, CK_MOUSE_INTERRUPT);
                 break;
             case MOUSE_TRIGGERABLE_MODIFIER_CTRL:
-                held_modifier_on(keyboard_state, HELD_MODIFIER_CTRL);
-                superkey_inject_interrupt(keyboard_state, SK_CTRL, CK_MOUSE_INTERRUPT);
+                held_modifier_on(HELD_MODIFIER_CTRL);
+                superkey_inject_interrupt(SK_CTRL, CK_MOUSE_INTERRUPT);
                 break;
             case MOUSE_TRIGGERABLE_MODIFIER_GUI:
-                held_modifier_on(keyboard_state, HELD_MODIFIER_GUI);
-                superkey_inject_interrupt(keyboard_state, SK_GUI, CK_MOUSE_INTERRUPT);
+                held_modifier_on(HELD_MODIFIER_GUI);
+                superkey_inject_interrupt(SK_GUI, CK_MOUSE_INTERRUPT);
                 break;
         }
     }
 }
 
-void mouse_triggerable_modifier_off(keyboard_state_t* keyboard_state, uint8_t mouse_triggerable_modifier) {
+void mouse_triggerable_modifier_off(size_t mouse_triggerable_modifier) {
     // held modifiers should be turned off separately after this is called
-    if (!keyboard_state->mouse_triggerable_modifier_is_active[mouse_triggerable_modifier]) {
+    if (!keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier]) {
         return;
     }
-    keyboard_state->n_mouse_triggerable_modifiers_active--;
-    keyboard_state->mouse_triggerable_modifier_is_active[mouse_triggerable_modifier] = false;
-    if (keyboard_state->n_mouse_triggerable_modifiers_active == 0) {
-        mouse_passthrough_off();
+    keyboard_state.n_mouse_triggerable_modifiers_active--;
+    keyboard_state.mouse_triggerable_modifier_is_active[mouse_triggerable_modifier] = false;
+    if (keyboard_state.n_mouse_triggerable_modifiers_active == 0) {
+        mouse_passthrough_send_buttons_off();
         mouse_passthrough_block_buttons_off();
+        mouse_passthrough_send_wheel_off();
         mouse_passthrough_block_wheel_off();
-        if (keyboard_state->mouse_is_active) {
-            keyboard_state->mouse_is_active = false;
+        if (keyboard_state.mouse_is_active) {
+            keyboard_state.mouse_is_active = false;
         }
     }
 }
@@ -508,63 +511,67 @@ void mouse_triggerable_modifier_off(keyboard_state_t* keyboard_state, uint8_t mo
 // when oneshots are active, the utilities layer is momentary, without support for custom keycodes
 // when oneshots are inactive, the utilities layer is an oneshot that can become persistent
 
-void utilities_oneshot_on_task(keyboard_state_t* keyboard_state) {
+void utilities_oneshot_on_task(void) {
+    mouse_passthrough_send_buttons_on();
+    mouse_passthrough_send_pointer_on();
+    mouse_passthrough_send_wheel_on();
+    dragscroll_on();
     layer_on(LAYER_UTILITIES);
     intercept_on(INTERCEPT_UTILITIES_ONESHOT);
-    keyboard_state->utilities_oneshot_state = UTILITIES_ONESHOT_STATE_WAITING_FOR_FIRST_KEY;
-    keyboard_state->utilities_ab_undo_is_next = true;
+    keyboard_state.utilities_oneshot_state = UTILITIES_ONESHOT_STATE_WAITING_FOR_FIRST_KEY;
+    keyboard_state.utilities_ab_undo_is_next = true;
 }
 
-void utilities_oneshot_off_task(keyboard_state_t* keyboard_state) {
+void utilities_oneshot_off_task(void) {
+    mouse_passthrough_send_buttons_off();
+    mouse_passthrough_send_pointer_off();
+    mouse_passthrough_send_wheel_off();
+    dragscroll_off();
     layer_off(LAYER_UTILITIES);
     intercept_off(INTERCEPT_UTILITIES_ONESHOT);
     timeout_off(TIMEOUT_UTILITIES_ONESHOT);
-    keyboard_state->utilities_oneshot_state = UTILITIES_ONESHOT_STATE_OFF;
-    keyboard_state->utilities_ab_undo_is_registered = false;
-    keyboard_state->utilities_ab_redo_is_registered = false;
+    keyboard_state.utilities_oneshot_state = UTILITIES_ONESHOT_STATE_OFF;
+    keyboard_state.utilities_ab_undo_is_registered = false;
+    keyboard_state.utilities_ab_redo_is_registered = false;
     clear_keyboard();
 }
 
-void sk_ctrl_down_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    if (keyboard_state->n_oneshots_active > 0) {
-        keyboard_state->utilities_momentary_mode_is_on = true;
+void sk_ctrl_down_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.n_oneshots_active > 0) {
+        keyboard_state.utilities_momentary_mode_is_on = true;
         layer_on(LAYER_UTILITIES);
     } else {
-        keyboard_state->utilities_momentary_mode_is_on = false;
+        keyboard_state.utilities_momentary_mode_is_on = false;
         intercept_on(INTERCEPT_CTRL);
-        mouse_triggerable_modifier_on(keyboard_state, MOUSE_TRIGGERABLE_MODIFIER_CTRL);
+        mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_CTRL);
     }
 }
 
-void sk_ctrl_up_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    mouse_triggerable_modifier_off(keyboard_state, MOUSE_TRIGGERABLE_MODIFIER_CTRL);
-    held_modifier_off(keyboard_state, HELD_MODIFIER_CTRL);
-    if (keyboard_state->utilities_momentary_mode_is_on) {
+void sk_ctrl_up_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_off(MOUSE_TRIGGERABLE_MODIFIER_CTRL);
+    held_modifier_off(HELD_MODIFIER_CTRL);
+    if (keyboard_state.utilities_momentary_mode_is_on) {
         layer_off(LAYER_UTILITIES);
     } else {
         intercept_off(INTERCEPT_CTRL);
         clear_keyboard();
     }
     if (superkey_state->interrupt_result == NO_INTERRUPT && superkey_state->timeout_result == NO_TIMEOUT) {
-        if (keyboard_state->oneshot_is_active[ONESHOT_CTRL]) {
-            oneshots_off_task(keyboard_state);
-            if (keyboard_state->utilities_oneshot_state != UTILITIES_ONESHOT_STATE_OFF) {
-                utilities_oneshot_off_task(keyboard_state);
+        if (keyboard_state.oneshot_is_active[ONESHOT_CTRL]) {
+            oneshots_off_task();
+            if (keyboard_state.utilities_oneshot_state != UTILITIES_ONESHOT_STATE_OFF) {
+                utilities_oneshot_off_task();
             }
         } else {
-            oneshot_on_task(keyboard_state, ONESHOT_CTRL);
-            if (keyboard_state->n_oneshots_active == 1) {
-                utilities_oneshot_on_task(keyboard_state);
+            oneshot_on_task(ONESHOT_CTRL);
+            if (keyboard_state.n_oneshots_active == 1) {
+                utilities_oneshot_on_task();
             }
         }
     }
 }
- 
-bool sk_ctrl_interrupt_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    return false;
-}
 
-bool intercept_ctrl_cb(keyboard_state_t* keyboard_state, uint16_t keycode, bool pressed) {
+bool intercept_ctrl_cb(uint16_t keycode, bool pressed) {
     if (keycode < KC_A || keycode > KC_EXSEL) {
         return true;
     }
@@ -576,14 +583,33 @@ bool intercept_ctrl_cb(keyboard_state_t* keyboard_state, uint16_t keycode, bool 
     return false;
 }
 
-bool intercept_utilities_oneshot_cb(keyboard_state_t* keyboard_state, uint16_t keycode, bool pressed) {
+bool intercept_utilities_oneshot_cb(uint16_t keycode, bool pressed) {
     switch (keycode) {
+
+        // exit utilities oneshot
+        case KC_ENT:
+        case KC_BSPC:
+            oneshots_off_task();
+            utilities_oneshot_off_task();
+            if (pressed) {
+                register_code(keycode);
+            } else {
+                unregister_code(keycode);
+            }
+            return false;
+
+        // print screen
+        case KC_PSCR:
+            if (pressed) {
+                tap_code(KC_PSCR);
+            }
+            break;
 
         // basic keycodes
         case KC_ESC:
         case KC_DEL:
-        case KC_UP:
         case KC_DOWN:
+        case KC_UP:
             if (pressed) {
                 register_code(keycode);
             } else {
@@ -623,52 +649,33 @@ bool intercept_utilities_oneshot_cb(keyboard_state_t* keyboard_state, uint16_t k
 
         // undo/redo
         case CK_UNDO:
-            if (pressed && !keyboard_state->utilities_ab_redo_is_registered) {
+            if (pressed && !keyboard_state.utilities_ab_redo_is_registered) {
                 register_code16(C(KC_Z));
-                keyboard_state->utilities_ab_undo_is_registered = true;
+                keyboard_state.utilities_ab_undo_is_registered = true;
             }
-            if (!pressed && keyboard_state->utilities_ab_undo_is_registered) {
+            if (!pressed && keyboard_state.utilities_ab_undo_is_registered) {
                 unregister_code16(C(KC_Z));
-                keyboard_state->utilities_ab_undo_is_registered = false;
-                keyboard_state->utilities_ab_undo_is_next = false;
+                keyboard_state.utilities_ab_undo_is_registered = false;
+                keyboard_state.utilities_ab_undo_is_next = false;
             }
             break;
         case CK_REDO:
-            if (pressed && !keyboard_state->utilities_ab_undo_is_registered) {
+            if (pressed && !keyboard_state.utilities_ab_undo_is_registered) {
                 register_code16(C(S(KC_Z)));
-                keyboard_state->utilities_ab_redo_is_registered = true;
+                keyboard_state.utilities_ab_redo_is_registered = true;
             }
-            if (!pressed && keyboard_state->utilities_ab_redo_is_registered) {
+            if (!pressed && keyboard_state.utilities_ab_redo_is_registered) {
                 unregister_code16(C(S(KC_Z)));
-                keyboard_state->utilities_ab_redo_is_registered = false;
-                keyboard_state->utilities_ab_undo_is_next = true;
+                keyboard_state.utilities_ab_redo_is_registered = false;
+                keyboard_state.utilities_ab_undo_is_next = true;
             }
             break;
         case CK_AB:
-            if (pressed && !keyboard_state->utilities_ab_undo_is_registered && !keyboard_state->utilities_ab_redo_is_registered) {
-                tap_code16(keyboard_state->utilities_ab_undo_is_next ? C(KC_Z) : C(S(KC_Z)));
-                keyboard_state->utilities_ab_undo_is_next = !keyboard_state->utilities_ab_undo_is_next;
+            if (pressed && !keyboard_state.utilities_ab_undo_is_registered && !keyboard_state.utilities_ab_redo_is_registered) {
+                tap_code16(keyboard_state.utilities_ab_undo_is_next ? C(KC_Z) : C(S(KC_Z)));
+                keyboard_state.utilities_ab_undo_is_next = !keyboard_state.utilities_ab_undo_is_next;
             }
             break;
-
-        // print screen
-        case KC_PSCR:
-            if (pressed) {
-                tap_code(KC_PSCR);
-            }
-            break;
-
-        // exit utilities oneshot
-        case KC_ENT:
-        case KC_BSPC:
-            oneshots_off_task(keyboard_state);
-            utilities_oneshot_off_task(keyboard_state);
-            if (pressed) {
-                register_code(keycode);
-            } else {
-                unregister_code(keycode);
-            }
-            return false;
 
         // default
         default:
@@ -676,24 +683,24 @@ bool intercept_utilities_oneshot_cb(keyboard_state_t* keyboard_state, uint16_t k
     }
 
     // make the utilities layer persistent if more than one keypress occurs, or if the first key is held
-    switch (keyboard_state->utilities_oneshot_state) {
+    switch (keyboard_state.utilities_oneshot_state) {
         case UTILITIES_ONESHOT_STATE_WAITING_FOR_FIRST_KEY:
             if (pressed) {
-                keyboard_state->utilities_oneshot_state = UTILITIES_ONESHOT_STATE_HOLDING_FIRST_KEY;
+                keyboard_state.utilities_oneshot_state = UTILITIES_ONESHOT_STATE_HOLDING_FIRST_KEY;
                 timeout_on(TIMEOUT_UTILITIES_ONESHOT);
             }
             break;
         case UTILITIES_ONESHOT_STATE_HOLDING_FIRST_KEY:
             if (pressed) {
-                keyboard_state->utilities_oneshot_state = UTILITIES_ONESHOT_STATE_PERSISTENT;
+                keyboard_state.utilities_oneshot_state = UTILITIES_ONESHOT_STATE_PERSISTENT;
                 timeout_off(TIMEOUT_UTILITIES_ONESHOT);
             } else {
-                keyboard_state->utilities_oneshot_state = UTILITIES_ONESHOT_STATE_WAITING_FOR_SECOND_KEY;
+                keyboard_state.utilities_oneshot_state = UTILITIES_ONESHOT_STATE_WAITING_FOR_SECOND_KEY;
             }
             break;
         case UTILITIES_ONESHOT_STATE_WAITING_FOR_SECOND_KEY:
             if (pressed) {
-                keyboard_state->utilities_oneshot_state = UTILITIES_ONESHOT_STATE_PERSISTENT;
+                keyboard_state.utilities_oneshot_state = UTILITIES_ONESHOT_STATE_PERSISTENT;
                 timeout_off(TIMEOUT_UTILITIES_ONESHOT);
             }
             break;
@@ -702,10 +709,10 @@ bool intercept_utilities_oneshot_cb(keyboard_state_t* keyboard_state, uint16_t k
     return false;
 }
 
-void timeout_utilities_oneshot_cb(keyboard_state_t* keyboard_state) {
-    if (keyboard_state->utilities_oneshot_state != UTILITIES_ONESHOT_STATE_HOLDING_FIRST_KEY) {
-        oneshots_off_task(keyboard_state);
-        utilities_oneshot_off_task(keyboard_state);
+void timeout_utilities_oneshot_cb(void) {
+    if (keyboard_state.utilities_oneshot_state != UTILITIES_ONESHOT_STATE_HOLDING_FIRST_KEY) {
+        oneshots_off_task();
+        utilities_oneshot_off_task();
     }
 }
 
@@ -717,75 +724,146 @@ void timeout_utilities_oneshot_cb(keyboard_state_t* keyboard_state) {
 // selective ctrl only applies to left/right
 // selective shift applies to everything
 
-void sk_alt_down_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
+void sk_alt_down_cb(superkey_state_t* superkey_state) {
     layer_on(LAYER_ARROWS);
     intercept_on(INTERCEPT_ARROWS);
-    if (keyboard_state->n_oneshots_active == 0) {
-        mouse_triggerable_modifier_on(keyboard_state, MOUSE_TRIGGERABLE_MODIFIER_ALT);
+    if (keyboard_state.n_oneshots_active == 0) {
+        mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_ALT);
     }
 }
 
-void sk_alt_up_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    mouse_triggerable_modifier_off(keyboard_state, MOUSE_TRIGGERABLE_MODIFIER_ALT);
-    held_modifier_off(keyboard_state, HELD_MODIFIER_ALT);
+void sk_alt_up_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_off(MOUSE_TRIGGERABLE_MODIFIER_ALT);
+    held_modifier_off(HELD_MODIFIER_ALT);
     layer_off(LAYER_ARROWS);
     intercept_off(INTERCEPT_ARROWS);
 
     // make sure things are cleaned up
-    memset(keyboard_state->arrow_modifier_is_active, 0, sizeof(keyboard_state->arrow_modifier_is_active));
-    if (keyboard_state->arrow_delete_word_left_is_registered) {
-        keyboard_state->arrow_delete_word_left_is_registered = false;
+    memset(keyboard_state.arrow_modifier_is_active, 0, sizeof(keyboard_state.arrow_modifier_is_active));
+    if (keyboard_state.arrow_delete_word_left_is_registered) {
+        keyboard_state.arrow_delete_word_left_is_registered = false;
         unregister_code16(C(KC_BSPC));
     }
-    if (keyboard_state->arrow_delete_word_right_is_registered) {
-        keyboard_state->arrow_delete_word_right_is_registered = false;
+    if (keyboard_state.arrow_delete_word_right_is_registered) {
+        keyboard_state.arrow_delete_word_right_is_registered = false;
         unregister_code16(C(KC_DEL));
     }
-    unregister_code16(keyboard_state->arrow_horizontal_last_keycode_registered);
-    keyboard_state->arrow_horizontal_last_keycode_registered = KC_NO;
-    keyboard_state->arrow_horizontal_state = ARROW_STATE_CENTER;
-    unregister_code16(keyboard_state->arrow_vertical_last_keycode_registered);
-    keyboard_state->arrow_vertical_last_keycode_registered = KC_NO;
-    keyboard_state->arrow_vertical_state = ARROW_STATE_CENTER;
+    unregister_code16(keyboard_state.arrow_horizontal_last_keycode_registered);
+    keyboard_state.arrow_horizontal_last_keycode_registered = KC_NO;
+    keyboard_state.arrow_horizontal_state = ARROW_STATE_CENTER;
+    unregister_code16(keyboard_state.arrow_vertical_last_keycode_registered);
+    keyboard_state.arrow_vertical_last_keycode_registered = KC_NO;
+    keyboard_state.arrow_vertical_state = ARROW_STATE_CENTER;
 
     // activate/deactivate oneshot if the key was tapped
     if (superkey_state->interrupt_result == NO_INTERRUPT && superkey_state->timeout_result == NO_TIMEOUT) {
-        if (keyboard_state->oneshot_is_active[ONESHOT_ALT]) {
-            oneshots_off_task(keyboard_state);
+        if (keyboard_state.oneshot_is_active[ONESHOT_ALT]) {
+            oneshots_off_task();
         } else {
-            oneshot_on_task(keyboard_state, ONESHOT_ALT);
-            if (keyboard_state->utilities_oneshot_state != UTILITIES_ONESHOT_STATE_OFF) {
-                utilities_oneshot_off_task(keyboard_state);
+            oneshot_on_task(ONESHOT_ALT);
+            if (keyboard_state.utilities_oneshot_state != UTILITIES_ONESHOT_STATE_OFF) {
+                utilities_oneshot_off_task();
             }
         }
     }
 }
 
-bool sk_alt_interrupt_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    return false;
-}
-
-bool intercept_arrows_cb(keyboard_state_t* keyboard_state, uint16_t keycode, bool pressed) {
+bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
     bool update_horizontal = false;
     bool update_vertical = false;
     switch (keycode) {
 
+        // home and end keys
+        case KC_HOME:
+        case KC_END:
+            if (pressed) {
+                if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+                    keycode = S(keycode);
+                }
+                tap_code16(keycode);
+            }
+            return false;
+
+        // arrow keys
+        case KC_RIGHT:
+            if (keyboard_state.arrow_horizontal_state == ARROW_STATE_RIGHT && !pressed) {
+                keyboard_state.arrow_horizontal_state = ARROW_STATE_CENTER;
+                update_horizontal = true;
+            } else if (keyboard_state.arrow_horizontal_state != ARROW_STATE_RIGHT && pressed) {
+                keyboard_state.arrow_horizontal_state = ARROW_STATE_RIGHT;
+                update_horizontal = true;
+            }
+            break;
+        case KC_LEFT:
+            if (keyboard_state.arrow_horizontal_state == ARROW_STATE_LEFT && !pressed) {
+                keyboard_state.arrow_horizontal_state = ARROW_STATE_CENTER;
+                update_horizontal = true;
+            } else if (keyboard_state.arrow_horizontal_state != ARROW_STATE_LEFT && pressed) {
+                keyboard_state.arrow_horizontal_state = ARROW_STATE_LEFT;
+                update_horizontal = true;
+            }
+            break;
+        case KC_DOWN:
+            if (keyboard_state.arrow_vertical_state == ARROW_STATE_DOWN && !pressed) {
+                keyboard_state.arrow_vertical_state = ARROW_STATE_CENTER;
+                update_vertical = true;
+            } else if (keyboard_state.arrow_vertical_state != ARROW_STATE_DOWN && pressed) {
+                keyboard_state.arrow_vertical_state = ARROW_STATE_DOWN;
+                update_vertical = true;
+            }
+            break;
+        case KC_UP:
+            if (keyboard_state.arrow_vertical_state == ARROW_STATE_UP && !pressed) {
+                keyboard_state.arrow_vertical_state = ARROW_STATE_CENTER;
+                update_vertical = true;
+            } else if (keyboard_state.arrow_vertical_state != ARROW_STATE_UP && pressed) {
+                keyboard_state.arrow_vertical_state = ARROW_STATE_UP;
+                update_vertical = true;
+            }
+            break;
+
+        // standard modifier keys
+        case KC_LALT:
+        case KC_LCTL:
+        case KC_LSFT:
+            if (pressed) {
+                register_code(keycode);
+            } else {
+                unregister_code(keycode);
+            }
+            return false;
+
+        // selective modifier keys
+        case CK_SALT:
+            update_vertical = true;
+            keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT] = pressed;
+            break;
+        case CK_SCTL:
+            update_horizontal = true;
+            keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL] = pressed;
+            break;
+        case CK_SSFT:
+            update_horizontal = true;
+            update_vertical = true;
+            keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT] = pressed;
+            break;
+
         // delete-word keys
         case CK_DWL:
             if (pressed) {
-                keyboard_state->arrow_delete_word_left_is_registered = true;
+                keyboard_state.arrow_delete_word_left_is_registered = true;
                 register_code16(C(KC_BSPC));
             } else {
-                keyboard_state->arrow_delete_word_left_is_registered = false;
+                keyboard_state.arrow_delete_word_left_is_registered = false;
                 unregister_code16(C(KC_BSPC));
             }
             return false;
         case CK_DWR:
             if (pressed) {
-                keyboard_state->arrow_delete_word_right_is_registered = true;
+                keyboard_state.arrow_delete_word_right_is_registered = true;
                 register_code16(C(KC_DEL));
             } else {
-                keyboard_state->arrow_delete_word_right_is_registered = false;
+                keyboard_state.arrow_delete_word_right_is_registered = false;
                 unregister_code16(C(KC_DEL));
             }
             return false;
@@ -802,91 +880,6 @@ bool intercept_arrows_cb(keyboard_state_t* keyboard_state, uint16_t keycode, boo
                 tap_code(KC_BSPC);
             }
             return false;
-
-        // home and end keys
-        case KC_HOME:
-        case KC_END:
-            if (pressed) {
-                if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_ALT]) {
-                    keycode = A(keycode);
-                }
-                if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_CTRL]) {
-                    keycode = C(keycode);
-                }
-                if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
-                    keycode = S(keycode);
-                }
-                tap_code16(keycode);
-            }
-            return false;
-
-        // arrow keys
-        case KC_RIGHT:
-            if (keyboard_state->arrow_horizontal_state == ARROW_STATE_RIGHT && !pressed) {
-                keyboard_state->arrow_horizontal_state = ARROW_STATE_CENTER;
-                update_horizontal = true;
-            } else if (keyboard_state->arrow_horizontal_state != ARROW_STATE_RIGHT && pressed) {
-                keyboard_state->arrow_horizontal_state = ARROW_STATE_RIGHT;
-                update_horizontal = true;
-            }
-            break;
-        case KC_LEFT:
-            if (keyboard_state->arrow_horizontal_state == ARROW_STATE_LEFT && !pressed) {
-                keyboard_state->arrow_horizontal_state = ARROW_STATE_CENTER;
-                update_horizontal = true;
-            } else if (keyboard_state->arrow_horizontal_state != ARROW_STATE_LEFT && pressed) {
-                keyboard_state->arrow_horizontal_state = ARROW_STATE_LEFT;
-                update_horizontal = true;
-            }
-            break;
-        case KC_DOWN:
-            if (keyboard_state->arrow_vertical_state == ARROW_STATE_DOWN && !pressed) {
-                keyboard_state->arrow_vertical_state = ARROW_STATE_CENTER;
-                update_vertical = true;
-            } else if (keyboard_state->arrow_vertical_state != ARROW_STATE_DOWN && pressed) {
-                keyboard_state->arrow_vertical_state = ARROW_STATE_DOWN;
-                update_vertical = true;
-            }
-            break;
-        case KC_UP:
-            if (keyboard_state->arrow_vertical_state == ARROW_STATE_UP && !pressed) {
-                keyboard_state->arrow_vertical_state = ARROW_STATE_CENTER;
-                update_vertical = true;
-            } else if (keyboard_state->arrow_vertical_state != ARROW_STATE_UP && pressed) {
-                keyboard_state->arrow_vertical_state = ARROW_STATE_UP;
-                update_vertical = true;
-            }
-            break;
-            
-        // modifier keys
-        case KC_LALT:
-            update_horizontal = true;
-            update_vertical = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]);
-            keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_ALT] = pressed;
-            break;
-        case KC_LCTL:
-            update_horizontal = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]);
-            update_vertical = true;
-            keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_CTRL] = pressed;
-            break;
-        case KC_LSFT:
-            update_horizontal = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]);
-            update_vertical = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]);
-            keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] = pressed;
-            break;
-        case CK_SALT:
-            update_vertical = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_ALT]);
-            keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT] = pressed;
-            break;
-        case CK_SCTL:
-            update_horizontal = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_CTRL]);
-            keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL] = pressed;
-            break;
-        case CK_SSFT:
-            update_horizontal = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SHIFT]);
-            update_vertical = !(keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SHIFT]);
-            keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT] = pressed;
-            break;
         
         // default
         default:
@@ -894,49 +887,49 @@ bool intercept_arrows_cb(keyboard_state_t* keyboard_state, uint16_t keycode, boo
     }
 
     if (update_horizontal) {
-        unregister_code16(keyboard_state->arrow_horizontal_last_keycode_registered);
-        if (keyboard_state->arrow_horizontal_state == ARROW_STATE_CENTER) {
-            keyboard_state->arrow_horizontal_last_keycode_registered = KC_NO;
+        unregister_code16(keyboard_state.arrow_horizontal_last_keycode_registered);
+        if (keyboard_state.arrow_horizontal_state == ARROW_STATE_CENTER) {
+            keyboard_state.arrow_horizontal_last_keycode_registered = KC_NO;
         } else {
-            if (keyboard_state->arrow_horizontal_state == ARROW_STATE_LEFT) {
+            if (keyboard_state.arrow_horizontal_state == ARROW_STATE_LEFT) {
                 keycode = KC_LEFT;
             } else {
                 keycode = KC_RIGHT;
             }
-            if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_ALT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_ALT]) {
                 keycode = A(keycode);
             }
-            if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_CTRL] || keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_CTRL] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]) {
                 keycode = C(keycode);
             }
-            if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                 keycode = S(keycode);
             }
             register_code16(keycode);
-            keyboard_state->arrow_horizontal_last_keycode_registered = keycode;
+            keyboard_state.arrow_horizontal_last_keycode_registered = keycode;
         }
     }
     if (update_vertical) {
-        unregister_code16(keyboard_state->arrow_vertical_last_keycode_registered);
-        if (keyboard_state->arrow_vertical_state == ARROW_STATE_CENTER) {
-            keyboard_state->arrow_vertical_last_keycode_registered = KC_NO;
+        unregister_code16(keyboard_state.arrow_vertical_last_keycode_registered);
+        if (keyboard_state.arrow_vertical_state == ARROW_STATE_CENTER) {
+            keyboard_state.arrow_vertical_last_keycode_registered = KC_NO;
         } else {
-            if (keyboard_state->arrow_vertical_state == ARROW_STATE_UP) {
+            if (keyboard_state.arrow_vertical_state == ARROW_STATE_UP) {
                 keycode = KC_UP;
             } else {
                 keycode = KC_DOWN;
             }
-            if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_ALT] || keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_ALT] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]) {
                 keycode = A(keycode);
             }
-            if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_CTRL]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_CTRL]) {
                 keycode = C(keycode);
             }
-            if (keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state->arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SHIFT] || keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                 keycode = S(keycode);
             }
             register_code16(keycode);
-            keyboard_state->arrow_vertical_last_keycode_registered = keycode;
+            keyboard_state.arrow_vertical_last_keycode_registered = keycode;
         }
     }
     
@@ -947,35 +940,31 @@ bool intercept_arrows_cb(keyboard_state_t* keyboard_state, uint16_t keycode, boo
 // GUI ONESHOT AND FUNCTION LAYER
 // ============================================================================
 
-void sk_gui_down_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
+void sk_gui_down_cb(superkey_state_t* superkey_state) {
     layer_on(LAYER_FUNCTION);
-    if (keyboard_state->n_oneshots_active == 0) {
-        mouse_triggerable_modifier_on(keyboard_state, MOUSE_TRIGGERABLE_MODIFIER_GUI);
+    if (keyboard_state.n_oneshots_active == 0) {
+        mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_GUI);
     }
 }
 
-void sk_gui_up_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    mouse_triggerable_modifier_off(keyboard_state, MOUSE_TRIGGERABLE_MODIFIER_GUI);
-    held_modifier_off(keyboard_state, HELD_MODIFIER_GUI);
+void sk_gui_up_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_off(MOUSE_TRIGGERABLE_MODIFIER_GUI);
+    held_modifier_off(HELD_MODIFIER_GUI);
     layer_off(LAYER_FUNCTION);
 
     // activate/deactivate oneshot if the key was tapped
     if (superkey_state->multitap_result != NO_MULTITAP) {
         reset_keyboard();
     } else if (superkey_state->interrupt_result == NO_INTERRUPT && superkey_state->timeout_result == NO_TIMEOUT) {
-        if (keyboard_state->oneshot_is_active[ONESHOT_GUI]) {
-            oneshots_off_task(keyboard_state);
+        if (keyboard_state.oneshot_is_active[ONESHOT_GUI]) {
+            oneshots_off_task();
         } else {
-            oneshot_on_task(keyboard_state, ONESHOT_GUI);
-            if (keyboard_state->utilities_oneshot_state != UTILITIES_ONESHOT_STATE_OFF) {
-                utilities_oneshot_off_task(keyboard_state);
+            oneshot_on_task(ONESHOT_GUI);
+            if (keyboard_state.utilities_oneshot_state != UTILITIES_ONESHOT_STATE_OFF) {
+                utilities_oneshot_off_task();
             }
         }
     }
-}
-
-bool sk_gui_interrupt_cb(keyboard_state_t* keyboard_state, superkey_state_t* superkey_state) {
-    return false;
 }
 
 // ============================================================================
@@ -996,12 +985,12 @@ const size_t n_intercepts = sizeof(intercepts) / sizeof(intercept_t);
 // ============================================================================
 
 superkey_t superkeys[] = {
-    //        KEYCODE,  ALIAS_KEYCODE,  TAP_TERM,           MULTITAP_TERM,          DOWN_FN,            UP_FN,          INTERRUPT_FN,           TIMEOUT_FN
-    SK_DEFINE(SK_BASE,  KC_NO,          DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_base_down_cb,   &sk_base_up_cb, NULL,                   &sk_base_timeout_cb),
-    SK_DEFINE(SK_SYMB,  KC_NO,          DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_symb_down_cb,   &sk_symb_up_cb, NULL,                   NULL),
-    SK_DEFINE(SK_ALT,   KC_LALT,        DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_alt_down_cb,    &sk_alt_up_cb,  &sk_alt_interrupt_cb,   NULL),
-    SK_DEFINE(SK_CTRL,  KC_LCTL,        DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_ctrl_down_cb,   &sk_ctrl_up_cb, &sk_ctrl_interrupt_cb,  NULL),
-    SK_DEFINE(SK_GUI,   KC_LGUI,        DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_gui_down_cb,    &sk_gui_up_cb,  &sk_gui_interrupt_cb,   NULL),
+    //        KEYCODE,  TAP_TERM,           MULTITAP_TERM,          DOWN_FN,            UP_FN,          TIMEOUT_FN
+    SK_DEFINE(SK_BASE,  DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_base_down_cb,   &sk_base_up_cb, &sk_base_timeout_cb),
+    SK_DEFINE(SK_SYMB,  DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_symb_down_cb,   &sk_symb_up_cb, NULL),
+    SK_DEFINE(SK_ALT,   DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_alt_down_cb,    &sk_alt_up_cb,  NULL),
+    SK_DEFINE(SK_CTRL,  DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_ctrl_down_cb,   &sk_ctrl_up_cb, NULL),
+    SK_DEFINE(SK_GUI,   DEFAULT_TAP_TERM,   DEFAULT_MULTITAP_TERM,  &sk_gui_down_cb,    &sk_gui_up_cb,  NULL),
 };
 const size_t n_superkeys = sizeof(superkeys) / sizeof(superkey_t);
 

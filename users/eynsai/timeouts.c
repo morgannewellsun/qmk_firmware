@@ -1,11 +1,11 @@
-#include "include/timeouts.h"
+#include "timeouts.h"
 #include "keyboard.h"
 
-void timeout_matrix_scan_task(struct keyboard_state_t* keyboard_state) {
+void timeout_matrix_scan_task(void) {
     for (size_t i = 0; i < n_timeouts; i++) {
         if (timeouts[i].active && timer_elapsed32(timeouts[i].start_time) > timeouts[i].duration) {
             if (timeouts[i].function != NULL) {
-                timeouts[i].function(keyboard_state);
+                timeouts[i].function();
             }
             timeouts[i].active = false;
         }

@@ -1,7 +1,7 @@
 #pragma once
 
-#include "include/rgb_engine.h"
 #include "quantum.h"
+#include "rgb_engine.h"
 
 // ============================================================================
 // QMK: KEYMAP AND KEYCODES

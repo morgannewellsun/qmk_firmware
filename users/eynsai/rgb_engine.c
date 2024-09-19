@@ -1,4 +1,4 @@
-#include "include/rgb_engine.h"
+#include "rgb_engine.h"
 
 static void rgb_simplify(rgb_state_t* rgb_state) {
     // Avoid unnecessary hue rotations

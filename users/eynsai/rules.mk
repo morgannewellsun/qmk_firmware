@@ -7,7 +7,7 @@ SRC += rgb_engine.c
 SRC += superkeys.c
 SRC += timeouts.c
 LTO_ENABLE = yes
-OPT = 3  # -O3 optimization
+OPT = 3  # -O? optimization
 
 # qmk features necessary for keymap
 KEY_OVERRIDE_ENABLE = yes

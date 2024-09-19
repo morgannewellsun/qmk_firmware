@@ -1,14 +1,14 @@
 #pragma once
 
+#include "quantum.h"
+
 #define DEFAULT_TAP_TERM 175
 #define DEFAULT_MULTITAP_TERM 175
 
 #define SUPERKEY_RANGE_START SAFE_RANGE
 #define SK_INDEX(KC) (KC - SUPERKEY_RANGE_START)
-#define SK_DEFINE(_keycode, _alias_keycode, _tap_term, _multitap_term, _down, _up, _interrupt, _timeout) \
-    [SK_INDEX(_keycode)] = { .config = {.keycode = _keycode, .alias_keycode = _alias_keycode, .tap_term = _tap_term, .multitap_term = _multitap_term, .down = _down, .up = _up, .interrupt = _interrupt, .timeout = _timeout} }
-
-struct keyboard_state_t;
+#define SK_DEFINE(_keycode, _tap_term, _multitap_term, _down, _up, _timeout) \
+    [SK_INDEX(_keycode)] = { .config = {.keycode = _keycode, .tap_term = _tap_term, .multitap_term = _multitap_term, .down = _down, .up = _up, .timeout = _timeout, .is_valid_superkey = true} }
 
 typedef struct superkey_state_t {   
     uint32_t multitap_start_time;
@@ -23,14 +23,13 @@ typedef struct superkey_state_t {
 } superkey_state_t;
 
 typedef struct superkey_config_t {  
-    void (*down)(struct keyboard_state_t*, superkey_state_t*);
-    bool (*interrupt)(struct keyboard_state_t*, superkey_state_t*);  // returns whether or not to interrupt
-    void (*timeout)(struct keyboard_state_t*, superkey_state_t*);
-    void (*up)(struct keyboard_state_t*, superkey_state_t*);
+    void (*down)(superkey_state_t*);
+    void (*timeout)(superkey_state_t*);
+    void (*up)(superkey_state_t*);
     uint16_t keycode;
-    uint16_t alias_keycode;
     uint16_t multitap_term;
     uint16_t tap_term;
+    bool is_valid_superkey;
 } superkey_config_t;
 
 typedef struct superkey_t {
@@ -60,8 +59,7 @@ enum multitap_results {
 extern superkey_t superkeys[];
 extern const size_t n_superkeys;
 
-
 void superkey_init_task(void);
-bool superkey_process_record_task(struct keyboard_state_t* keyboard_state, uint16_t keycode, bool pressed);
-void superkey_matrix_scan_task(struct keyboard_state_t* keyboard_state);
-void superkey_inject_interrupt(struct keyboard_state_t* keyboard_state, uint16_t superkey_keycode, uint16_t interrupting_keycode);
+bool superkey_process_record_task(uint16_t keycode, bool pressed);
+void superkey_matrix_scan_task(void);
+void superkey_inject_interrupt(uint16_t superkey_keycode, uint16_t interrupting_keycode);
