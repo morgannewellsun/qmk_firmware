@@ -294,12 +294,14 @@ __attribute__((weak)) bool pointing_device_task(void) {
     if (is_keyboard_left()) {
         local_mouse_report  = pointing_device_adjust_by_defines(local_mouse_report);
         shared_mouse_report = pointing_device_adjust_by_defines_right(shared_mouse_report);
+#    ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
         pointing_device_dragscroll_combined(&local_mouse_report, &shared_mouse_report);  // modified inplace
+#    endif
     } else {
         local_mouse_report  = pointing_device_adjust_by_defines_right(local_mouse_report);
         shared_mouse_report = pointing_device_adjust_by_defines(shared_mouse_report);
-        pointing_device_dragscroll_combined(&shared_mouse_report, &local_mouse_report);  // modified inplace
 #    ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
+        pointing_device_dragscroll_combined(&shared_mouse_report, &local_mouse_report);  // modified inplace
 #    endif
     }
     local_mouse_report = is_keyboard_left() ? pointing_device_task_combined_kb(local_mouse_report, shared_mouse_report) : pointing_device_task_combined_kb(shared_mouse_report, local_mouse_report);
