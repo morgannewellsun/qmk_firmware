@@ -355,6 +355,10 @@ bool intercept_oneshots_cb(uint16_t keycode, bool pressed) {
 void mouse_triggerable_modifier_pointing_device_task(report_mouse_t mouse_report) {
     if (keyboard_state.mouse_triggerable_modifier_is_active && !keyboard_state.mouse_triggerable_modifier_is_triggered && (mouse_report.buttons != 0 || mouse_report.v != 0 || mouse_report.h != 0)) {
         keyboard_state.mouse_triggerable_modifier_is_triggered = true;
+        if (is_dragscroll_on()) {
+            dragscroll_off();
+            keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = true;
+        }
         switch (keyboard_state.active_mouse_triggerable_modifier) {
             case MOUSE_TRIGGERABLE_MODIFIER_ALT:
                 register_code(KC_LALT);
@@ -379,6 +383,7 @@ void mouse_triggerable_modifier_on(size_t mouse_triggerable_modifier) {
     keyboard_state.mouse_triggerable_modifier_is_active = true;
     keyboard_state.mouse_triggerable_modifier_is_triggered = false;
     keyboard_state.active_mouse_triggerable_modifier = mouse_triggerable_modifier;
+    keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = false;
     mouse_passthrough_send_buttons_on();
     mouse_passthrough_block_buttons_on();
     mouse_passthrough_send_wheel_on();
@@ -404,6 +409,9 @@ void mouse_triggerable_modifier_off(void) {
     }
     keyboard_state.mouse_triggerable_modifier_is_active = false;
     keyboard_state.mouse_triggerable_modifier_is_triggered = false;
+    if (keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll) {
+        dragscroll_on();
+    }
     mouse_passthrough_send_buttons_off();
     mouse_passthrough_block_buttons_off();
     mouse_passthrough_send_wheel_off();
@@ -944,11 +952,8 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
         memset(&mouse_report, 0, sizeof(mouse_report));
         return mouse_report;
     }
-    if (is_dragscroll_on()) {
-        return mouse_report;
-    }
     mouse_triggerable_modifier_pointing_device_task(mouse_report);
-    if (is_hires_scroll_on()) {
+    if (!is_dragscroll_on() && is_hires_scroll_on()) {
         mouse_report.h *= pointing_device_get_hires_scroll_resolution();
         mouse_report.v *= pointing_device_get_hires_scroll_resolution();
     }

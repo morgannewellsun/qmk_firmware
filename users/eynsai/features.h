@@ -176,6 +176,7 @@ typedef struct keyboard_state_t {
     bool held_modifier_is_registered[N_HELD_MODIFIERS];
 
     // mouse passthrough
+    bool mouse_triggerable_modifier_interrupted_dragscroll;
     bool mouse_triggerable_modifier_is_active;
     bool mouse_triggerable_modifier_is_triggered;
     size_t active_mouse_triggerable_modifier;
