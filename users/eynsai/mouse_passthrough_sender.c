@@ -151,15 +151,6 @@ report_mouse_t mouse_passthrough_sender_pointing_device_task(report_mouse_t mous
         return mouse;
     }
 
-    if (block_buttons_on_queued && mouse.buttons == 0) {
-        block_buttons_on = true;
-        block_buttons_on_queued = false;
-    }
-    if (send_buttons_off_queued && mouse.buttons == 0) {
-        send_buttons_on = false;
-        send_buttons_off_queued = false;
-    }
-
     // send data payload
     if (((send_buttons_on && (mouse.buttons != last_buttons_sent)) || (send_pointer_on && ((mouse.x != 0) || (mouse.y != 0))) || (send_wheel_on && ((mouse.v != 0) || (mouse.h != 0)))) && (message_queue_next_empty_offset < sizeof(message_queue))) {
         memset(message_queue + message_queue_next_empty_offset, 0, QMK_RAW_HID_REPORT_SIZE);
@@ -190,6 +181,18 @@ report_mouse_t mouse_passthrough_sender_pointing_device_task(report_mouse_t mous
         mouse.v = 0;
         mouse.h = 0;
     }
+
+    // process queued changes in button block/send
+    // this must be done last so we can send the button off report
+    if (block_buttons_on_queued && mouse.buttons == 0) {
+        block_buttons_on = true;
+        block_buttons_on_queued = false;
+    }
+    if (send_buttons_off_queued && mouse.buttons == 0) {
+        send_buttons_on = false;
+        send_buttons_off_queued = false;
+    }
+
     return mouse;
 }
 

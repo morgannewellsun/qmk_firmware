@@ -349,22 +349,11 @@ bool intercept_oneshots_cb(uint16_t keycode, bool pressed) {
 }
 
 // ============================================================================
-// MOUSE PASSTHROUGH
+// MOUSE TRIGGERABLE MODIFIERS
 // ============================================================================
 
-void raw_hid_receive(uint8_t* data, uint8_t length) {
-    mouse_passthrough_reciever_raw_hid_receive_task(data);
-}
-
-report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
-    if (!is_mouse_passthrough_connected()) {
-        memset(&mouse_report, 0, sizeof(mouse_report));
-        return mouse_report;
-    }
-    if (is_dragscroll_on()) {
-        return mouse_report;
-    }
-    if (mouse_report.buttons != 0 || mouse_report.v != 0 || mouse_report.h != 0) {
+void mouse_triggerable_modifier_pointing_device_task(report_mouse_t mouse_report) {
+    if (keyboard_state.mouse_triggerable_modifier_is_active && !keyboard_state.mouse_triggerable_modifier_is_triggered && (mouse_report.buttons != 0 || mouse_report.v != 0 || mouse_report.h != 0)) {
         keyboard_state.mouse_triggerable_modifier_is_triggered = true;
         switch (keyboard_state.active_mouse_triggerable_modifier) {
             case MOUSE_TRIGGERABLE_MODIFIER_ALT:
@@ -381,11 +370,6 @@ report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
                 break;
         }
     }
-    if (is_hires_scroll_on()) {
-        mouse_report.h *= pointing_device_get_hires_scroll_resolution();
-        mouse_report.v *= pointing_device_get_hires_scroll_resolution();
-    }
-    return mouse_report;
 }
 
 void mouse_triggerable_modifier_on(size_t mouse_triggerable_modifier) {
@@ -465,17 +449,18 @@ void utilities_oneshot_off_task(void) {
 }
 
 void sk_ctrl_down_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_CTRL);
     if (keyboard_state.n_oneshots_active > 0) {
         keyboard_state.utilities_momentary_mode_is_on = true;
         layer_on(LAYER_UTILITIES);
     } else {
         keyboard_state.utilities_momentary_mode_is_on = false;
         intercept_on(INTERCEPT_CTRL);
-        mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_CTRL);
     }
 }
 
 void sk_ctrl_up_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_off();
     if (keyboard_state.utilities_momentary_mode_is_on) {
         layer_off(LAYER_UTILITIES);
     } else {
@@ -651,14 +636,13 @@ void timeout_utilities_oneshot_cb(void) {
 // selective shift applies to everything
 
 void sk_alt_down_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_ALT);
     layer_on(LAYER_ARROWS);
     intercept_on(INTERCEPT_ARROWS);
-    if (keyboard_state.n_oneshots_active == 0) {
-        mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_ALT);
-    }
 }
 
 void sk_alt_up_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_off();
     layer_off(LAYER_ARROWS);
     intercept_off(INTERCEPT_ARROWS);
 
@@ -859,13 +843,12 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
 // ============================================================================
 
 void sk_gui_down_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_GUI);
     layer_on(LAYER_FUNCTION);
-    if (keyboard_state.n_oneshots_active == 0) {
-        mouse_triggerable_modifier_on(MOUSE_TRIGGERABLE_MODIFIER_GUI);
-    }
 }
 
 void sk_gui_up_cb(superkey_state_t* superkey_state) {
+    mouse_triggerable_modifier_off();
     layer_off(LAYER_FUNCTION);
 
     // activate/deactivate oneshot if the key was tapped
@@ -932,7 +915,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     if (keycode == QK_BOOT) {
         reset_keyboard();
     }
-    mouse_triggerable_modifier_off();
     // earlier intercepts can prevent later intercepts from being called
     // earlier superkey interrupts can't prevent later superkey interrupts from being called
     // intercepts can't prevent superkey interrupts from being called
@@ -951,4 +933,24 @@ void matrix_scan_user(void) {
     superkey_matrix_scan_task();
     timeout_matrix_scan_task();
     mouse_passthrough_reciever_matrix_scan_task();
+}
+
+void raw_hid_receive(uint8_t* data, uint8_t length) {
+    mouse_passthrough_reciever_raw_hid_receive_task(data);
+}
+
+report_mouse_t pointing_device_task_user(report_mouse_t mouse_report) {
+    if (!is_mouse_passthrough_connected()) {
+        memset(&mouse_report, 0, sizeof(mouse_report));
+        return mouse_report;
+    }
+    if (is_dragscroll_on()) {
+        return mouse_report;
+    }
+    mouse_triggerable_modifier_pointing_device_task(mouse_report);
+    if (is_hires_scroll_on()) {
+        mouse_report.h *= pointing_device_get_hires_scroll_resolution();
+        mouse_report.v *= pointing_device_get_hires_scroll_resolution();
+    }
+    return mouse_report;
 }
