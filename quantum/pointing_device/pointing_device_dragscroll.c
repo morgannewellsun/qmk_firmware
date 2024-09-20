@@ -89,7 +89,7 @@ uint32_t last_scroll_time = 0;  // use a single shared timer for throttling
 dragscroll_state_t dragscroll_state = {0};
 report_mouse_t pre_dragscroll_mouse_report = {0};
 
-#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
+#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
 dragscroll_state_t dragscroll_state_right = {0};
 report_mouse_t pre_dragscroll_mouse_report_right = {0};
 #endif
@@ -319,7 +319,7 @@ void dragscroll_init(void) {
     dragscroll_state.smoothing_buffer_v.items = items_v;
     dragscroll_state.smoothing_buffer_h.maximum_size = DRAGSCROLL_SMOOTHING_H;
     dragscroll_state.smoothing_buffer_v.maximum_size = DRAGSCROLL_SMOOTHING_V;
-#    if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
+#    if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
     float* items_h_right = (float*)malloc(DRAGSCROLL_SMOOTHING_H * sizeof(float));
     float* items_v_right = (float*)malloc(DRAGSCROLL_SMOOTHING_V * sizeof(float));
     dragscroll_state_right.smoothing_buffer_h.items = items_h_right;
@@ -342,7 +342,7 @@ void pointing_device_dragscroll(report_mouse_t* mouse_report) {
     dragscroll_scroll_task(&dragscroll_state, mouse_report);
 }
 
-#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
+#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
 void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, report_mouse_t* mouse_report_right) {
     // save unmodified mouse report in case it's needed in pointing_device_task_user
     pre_dragscroll_mouse_report = *mouse_report_left;
@@ -371,7 +371,7 @@ void dragscroll_axis_snapping_toggle(void) { dragscroll_axis_snapping_toggle_tas
 bool is_dragscroll_axis_snapping_on(void) { return is_dragscroll_axis_snapping_on_task(&dragscroll_state); }
 report_mouse_t get_pre_dragscroll_mouse_report(void) { return pre_dragscroll_mouse_report; }
 
-#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
+#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
 void dragscroll_on_right(void) { dragscroll_on_task(&dragscroll_state_right); }
 void dragscroll_off_right(void) { dragscroll_off_task(&dragscroll_state_right); }
 void dragscroll_toggle_right(void) { dragscroll_toggle_task(&dragscroll_state_right); }

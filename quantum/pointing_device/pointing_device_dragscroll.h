@@ -74,7 +74,7 @@ void dragscroll_axis_snapping_toggle(void);
 bool is_dragscroll_axis_snapping_on(void);
 report_mouse_t get_pre_dragscroll_mouse_report(void);
 
-#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
+#if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
 void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, report_mouse_t* mouse_report_right);
 void dragscroll_on_right(void);
 void dragscroll_off_right(void);
