@@ -72,6 +72,7 @@ void dragscroll_axis_snapping_on(void);
 void dragscroll_axis_snapping_off(void);
 void dragscroll_axis_snapping_toggle(void);
 bool is_dragscroll_axis_snapping_on(void);
+report_mouse_t get_pre_dragscroll_mouse_report(void);
 
 #if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
 void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, report_mouse_t* mouse_report_right);
@@ -83,4 +84,5 @@ void dragscroll_axis_snapping_on_right(void);
 void dragscroll_axis_snapping_off_right(void);
 void dragscroll_axis_snapping_toggle_right(void);
 bool is_dragscroll_axis_snapping_on_right(void);
+report_mouse_t get_pre_dragscroll_mouse_report_right(void);
 #endif

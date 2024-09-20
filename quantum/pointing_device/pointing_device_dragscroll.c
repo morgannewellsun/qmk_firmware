@@ -87,9 +87,11 @@ float hires_scroll_axis_snapping_threshold;
 uint32_t last_scroll_time = 0;  // use a single shared timer for throttling
 
 dragscroll_state_t dragscroll_state = {0};
+report_mouse_t pre_dragscroll_mouse_report = {0};
 
 #if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
 dragscroll_state_t dragscroll_state_right = {0};
+report_mouse_t pre_dragscroll_mouse_report_right = {0};
 #endif
 
 /* core implementation of drag scroll */
@@ -329,6 +331,8 @@ void dragscroll_init(void) {
 }
 
 void pointing_device_dragscroll(report_mouse_t* mouse_report) {
+    // save unmodified mouse report in case it's needed in pointing_device_task_user
+    pre_dragscroll_mouse_report = *mouse_report;
     // accumulate on every call, but only send a nonzero mouse report periodically
     dragscroll_accumulate_task(&dragscroll_state, mouse_report);
     if (timer_elapsed32(last_scroll_time) < DRAGSCROLL_THROTTLE_MS) {
@@ -340,6 +344,9 @@ void pointing_device_dragscroll(report_mouse_t* mouse_report) {
 
 #if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
 void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, report_mouse_t* mouse_report_right) {
+    // save unmodified mouse report in case it's needed in pointing_device_task_user
+    pre_dragscroll_mouse_report = *mouse_report_left;
+    pre_dragscroll_mouse_report_right = *mouse_report_right;
     // accumulate on every call, but only send a nonzero mouse report periodically
     dragscroll_accumulate_task(&dragscroll_state, mouse_report_left);
     dragscroll_accumulate_task(&dragscroll_state_right, mouse_report_right);
@@ -362,6 +369,7 @@ void dragscroll_axis_snapping_on(void) { dragscroll_axis_snapping_on_task(&drags
 void dragscroll_axis_snapping_off(void) { dragscroll_axis_snapping_off_task(&dragscroll_state); }
 void dragscroll_axis_snapping_toggle(void) { dragscroll_axis_snapping_toggle_task(&dragscroll_state); }
 bool is_dragscroll_axis_snapping_on(void) { return is_dragscroll_axis_snapping_on_task(&dragscroll_state); }
+report_mouse_t get_pre_dragscroll_mouse_report(void) { return pre_dragscroll_mouse_report; }
 
 #if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED)
 void dragscroll_on_right(void) { dragscroll_on_task(&dragscroll_state_right); }
@@ -372,6 +380,8 @@ void dragscroll_axis_snapping_on_right(void) { dragscroll_axis_snapping_on_task(
 void dragscroll_axis_snapping_off_right(void) { dragscroll_axis_snapping_off_task(&dragscroll_state_right); }
 void dragscroll_axis_snapping_toggle_right(void) { dragscroll_axis_snapping_toggle_task(&dragscroll_state_right); }
 bool is_dragscroll_axis_snapping_on_right(void) { return is_dragscroll_axis_snapping_on_task(&dragscroll_state_right); }
+report_mouse_t get_pre_dragscroll_mouse_report_right(void) { return pre_dragscroll_mouse_report_right; }
+
 #endif
 
 #endif  // POINTING_DEVICE_DRAGSCROLL_ENABLE
