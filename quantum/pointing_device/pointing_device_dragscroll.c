@@ -151,7 +151,7 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
 
     float h;
     float v;
-
+    
     // apply smoothing to hires scrolling - don't apply it to normal scrolling since it makes normal scrolling feel unresponsive
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
     if (is_hires_scroll_on()) {
@@ -242,27 +242,29 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
     }
 
     // apply acceleration
-#if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+#ifdef DRAGSCROLL_ACCELERATION
+#    if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
     if (is_hires_scroll_on()) {
-#elif !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+#    elif !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
     if (!is_hires_scroll_on()) {
-#endif
+#    endif
         if (!(h == 0 && v == 0)) {
             // v_out = p * square(min(v_in - r, 0)) + q * (v_in - r) + r
             float speed = sqrt(h * h + v * v);
             float speed_offset = speed - acceleration_const_r;
             float scale_factor = acceleration_const_q * speed_offset + acceleration_const_r;
             if (speed_offset < 0) {
-                scale_factor += acceleration_constant_p * speed_offset * speed_offset;
+                scale_factor += acceleration_const_p * speed_offset * speed_offset;
             }
             scale_factor /= speed;
             h *= scale_factor;
             v *= scale_factor;
         }
-#if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+#    if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
     }
-#elif !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+#    elif !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
     }
+#    endif
 #endif
 
     // apply scaling
@@ -341,11 +343,11 @@ void dragscroll_init(void) {
 #endif  // POINTING_DEVICE_HIRES_SCROLL_ENABLE
 #ifdef DRAGSCROLL_ACCELERATION
     if (DRAGSCROLL_ACCELERATION_SCALE > 0) {  // guard against invalid parameters
-        acceleration_constant_p = DRAGSCROLL_ACCELERATION_BLEND / DRAGSCROLL_ACCELERATION_SCALE;
+        acceleration_const_p = DRAGSCROLL_ACCELERATION_BLEND / DRAGSCROLL_ACCELERATION_SCALE;
     } else {
-        acceleration_constant_p = 0;
+        acceleration_const_p = 0;
     }
-    acceleration_constant_q = DRAGSCROLL_ACCELERATION_BLEND + 1;
+    acceleration_const_q = DRAGSCROLL_ACCELERATION_BLEND + 1;
 #endif
 }
 
