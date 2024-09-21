@@ -763,16 +763,12 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
 
         // selective modifier keys
         case CK_SALT:
-            update_vertical = true;
             keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT] = pressed;
             break;
         case CK_SCTL:
-            update_horizontal = true;
             keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL] = pressed;
             break;
         case CK_SSFT:
-            update_horizontal = true;
-            update_vertical = true;
             keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT] = pressed;
             break;
 
