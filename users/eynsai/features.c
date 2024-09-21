@@ -932,11 +932,6 @@ void keyboard_post_init_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
-    if (keycode == KC_UP && record->event.pressed) {
-        print_and_reset_max_dragscroll_speed();
-        return false;
-    }
-
     // earlier intercepts can prevent later intercepts from being called
     // earlier superkey interrupts can't prevent later superkey interrupts from being called
     // intercepts can't prevent superkey interrupts from being called
