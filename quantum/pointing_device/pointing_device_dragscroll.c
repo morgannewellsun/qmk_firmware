@@ -372,28 +372,22 @@ void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, repo
 #ifdef DRAGSCROLL_ACCELERATION
 void print_and_reset_max_dragscroll_speed(void) {
     float power_of_ten    =   10000000;
-    uint32_t power_of_two = 0x10000000;
-    uint32_t output = 0;
+    uint64_t power_of_two = 0x10000000;
+    uint64_t output = 0;
     int digit;
-    for (int i = 0; i < 8; i++) {
-        digit = (int)(max_speed / power_of_ten);
-        power_of_ten -= digit * power_of_ten;
-        output += digit * power_of_two;
-        power_of_ten /=   10;
-        power_of_two /= 0x10;
+    while (power_of_two > 0) {
+        if (max_speed >= power_of_ten) {
+            max_speed -= power_of_ten;
+            output += power_of_two;
+        } else {
+            power_of_ten /= 10;
+            power_of_two >>= 4;
+        }
     }
-    send_dword(output);
+    send_dword((uint32_t)((output >> 32) && 0xFFFFFFFF));
     send_string(".");
-    power_of_two = 0x10000000;
-    output = 0;
-    for (int i = 0; i < 8; i++) {
-        digit = (int)(max_speed / power_of_ten);
-        power_of_ten -= digit * power_of_ten;
-        output += digit * power_of_two;
-        power_of_ten /=   10;
-        power_of_two /= 0x10;
-    }
-    send_dword(output);
+    send_dword((uint32_t)(output && 0xFFFFFFFF));
+    send_string(" ");
     max_speed = 0;
 }
 #endif
