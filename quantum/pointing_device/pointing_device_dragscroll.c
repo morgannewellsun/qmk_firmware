@@ -163,12 +163,12 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
     if (is_hires_scroll_on()) {
         ring_buffer_push(&(d->smoothing_buffer_h), d->accumulator_h);
         ring_buffer_push(&(d->smoothing_buffer_v), d->accumulator_v);
-        h = ring_buffer_mean(&(d->smoothing_buffer_h));
-        v = ring_buffer_mean(&(d->smoothing_buffer_v));
+        float h = ring_buffer_mean(&(d->smoothing_buffer_h));
+        float v = ring_buffer_mean(&(d->smoothing_buffer_v));
     } else {
 #endif
-        h = d->accumulator_h;
-        v = d->accumulator_v;
+        float h = d->accumulator_h;
+        float v = d->accumulator_v;
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
     }
 #endif
