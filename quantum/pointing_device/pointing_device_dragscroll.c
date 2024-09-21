@@ -95,7 +95,9 @@ report_mouse_t pre_dragscroll_mouse_report_right = {0};
 float acceleration_const_p;
 float acceleration_const_q;
 float acceleration_const_r;
-float max_speed;
+bool acceleration_scale_calibration_is_on = false;
+float acceleration_scale_calibration_mean = 0;
+long acceleration_scale_calibration_count = 0;
 #endif
 
 /* core implementation of drag scroll */
@@ -252,7 +254,6 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
         if (!(h == 0 && v == 0)) {
             // v_out = p * square(min(v_in - r, 0)) + q * (v_in - r) + r
             float speed = sqrt(h * h + v * v);
-            max_speed = speed > max_speed ? speed : max_speed;  // only for printing
             float speed_offset = speed - acceleration_const_r;
             float scale_factor = acceleration_const_q * speed_offset + acceleration_const_r;
             if (speed_offset < 0) {
@@ -261,6 +262,10 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
             scale_factor /= speed;
             h *= scale_factor;
             v *= scale_factor;
+            if (acceleration_scale_calibration_is_on) {
+                acceleration_scale_calibration_count += 1;
+                acceleration_scale_calibration_mean += (speed + acceleration_scale_calibration_mean) / acceleration_scale_calibration_count;
+            }
         }
 #    if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
     }
@@ -279,6 +284,17 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
     d->rounding_error_h = h - mouse_report->h;
     d->rounding_error_v = v - mouse_report->v;
 }
+
+#ifdef DRAGSCROLL_ACCELERATION
+static inline void set_acceleration_consts(float blend, float scale) {
+    scale = scale < 0 ? 0 : scale;
+    blend = blend < 0 ? 0 : blend;
+    blend = blend > 1 ? 1 : blend;
+    acceleration_const_p = blend / scale;
+    acceleration_const_q = blend + 1;
+    acceleration_const_r = scale;
+}
+#endif
 
 static void dragscroll_on_task(dragscroll_state_t* d) {
     if (d->active) { return; }
@@ -328,13 +344,7 @@ static bool is_dragscroll_axis_snapping_on_task(dragscroll_state_t* d) {
 
 void dragscroll_init(void) {
 #ifdef DRAGSCROLL_ACCELERATION
-    if (DRAGSCROLL_ACCELERATION_SCALE > 0) {  // guard against invalid parameters
-        acceleration_const_p = DRAGSCROLL_ACCELERATION_BLEND / DRAGSCROLL_ACCELERATION_SCALE;
-    } else {
-        acceleration_const_p = 0;
-    }
-    acceleration_const_q = DRAGSCROLL_ACCELERATION_BLEND + 1;
-    acceleration_const_r = DRAGSCROLL_ACCELERATION_SCALE;
+    set_acceleration_consts(DRAGSCROLL_ACCELERATION_BLEND, DRAGSCROLL_ACCELERATION_SCALE);
 #endif
 }
 
@@ -370,25 +380,17 @@ void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, repo
 /* functions to allow the user to control drag scroll */
 
 #ifdef DRAGSCROLL_ACCELERATION
-void print_and_reset_max_dragscroll_speed(void) {
-    float power_of_ten    =   10000000;
-    uint64_t power_of_two = 0x10000000;
-    uint64_t output = 0;
-    int digit;
-    while (power_of_two > 0) {
-        if (max_speed >= power_of_ten) {
-            max_speed -= power_of_ten;
-            output += power_of_two;
-        } else {
-            power_of_ten /= 10;
-            power_of_two >>= 4;
-        }
-    }
-    send_dword((uint32_t)((output >> 32) && 0xFFFFFFFF));
-    send_string(".");
-    send_dword((uint32_t)(output && 0xFFFFFFFF));
-    send_string(" ");
-    max_speed = 0;
+void start_dragscroll_acceleration_scale_calibration(void) {
+    acceleration_scale_calibration_is_on = true;
+    acceleration_scale_calibration_mean = 0;
+    acceleration_scale_calibration_count = 0;
+}
+
+void finish_dragscroll_acceleration_scale_calibration(void) {
+    acceleration_scale_calibration_is_on = false;
+    set_acceleration_consts(DRAGSCROLL_ACCELERATION_BLEND, acceleration_scale_calibration_mean);
+    send_string("Set acceleration scale parameter to 0x");
+    send_dword((uint32_t)acceleration_scale_calibration_count);
 }
 #endif
 
