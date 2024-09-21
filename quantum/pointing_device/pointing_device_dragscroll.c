@@ -294,6 +294,7 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
 #ifdef DRAGSCROLL_ACCELERATION
 static inline void set_acceleration_consts(float blend, float scale) {
     // multiply by DRAGSCROLL_THROTTLE_MS so that acceleration behaves the same when DRAGSCROLL_THROTTLE_MS is changed
+    // potential todo: also multiply by CPI so that acceleration behaves the same when CPI is changed
     scale *= DRAGSCROLL_THROTTLE_MS;
     scale = scale < 0 ? 0 : scale;
     blend = blend < 0 ? 0 : blend;

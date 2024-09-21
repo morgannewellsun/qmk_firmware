@@ -38,7 +38,7 @@
 #endif
 
 #ifndef DRAGSCROLL_SMOOTHING
-#    define DRAGSCROLL_SMOOTHING 1
+#    define DRAGSCROLL_SMOOTHING 5
 #else
 #    if DRAGSCROLL_SMOOTHING < 1
 #        error "DRAGSCROLL_SMOOTHING must be a positive integer!"
@@ -66,10 +66,10 @@
 
 #ifdef DRAGSCROLL_ACCELERATION
 #    ifndef DRAGSCROLL_ACCELERATION_SCALE
-#        define DRAGSCROLL_ACCELERATION_SCALE 10.0
+#        define DRAGSCROLL_ACCELERATION_SCALE 500.0
 #    endif
 #    ifndef DRAGSCROLL_ACCELERATION_BLEND
-#        define DRAGSCROLL_ACCELERATION_BLEND 1.0
+#        define DRAGSCROLL_ACCELERATION_BLEND 0.872116  // matches windows enhanced pointer precision behavior
 #    endif
 #endif
 
