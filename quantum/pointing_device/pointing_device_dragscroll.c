@@ -17,13 +17,13 @@
 #ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
 
 #include <stdlib.h>
-#include <stdio.h>
 #include <math.h>
-#include "timer.h"
 #include "host_driver.h"
-#include "usb_descriptor_common.h"
 #include "pointing_device.h"
 #include "pointing_device_dragscroll.h"
+#include "send_string.h"
+#include "timer.h"
+#include "usb_descriptor_common.h"
 
 /* implement a simple ring buffer for smoothing hires scrolling */
 
@@ -95,7 +95,7 @@ report_mouse_t pre_dragscroll_mouse_report_right = {0};
 float acceleration_const_p;
 float acceleration_const_q;
 float acceleration_const_r;
-float maximum_speed;
+float max_speed;
 #endif
 
 /* core implementation of drag scroll */
@@ -252,7 +252,7 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
         if (!(h == 0 && v == 0)) {
             // v_out = p * square(min(v_in - r, 0)) + q * (v_in - r) + r
             float speed = sqrt(h * h + v * v);
-            maximum_speed = speed > maximum_speed ? speed : maximum_speed;  // only for printing
+            max_speed = speed > max_speed ? speed : max_speed;  // only for printing
             float speed_offset = speed - acceleration_const_r;
             float scale_factor = acceleration_const_q * speed_offset + acceleration_const_r;
             if (speed_offset < 0) {
@@ -370,11 +370,31 @@ void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, repo
 /* functions to allow the user to control drag scroll */
 
 #ifdef DRAGSCROLL_ACCELERATION
-void print_maximum_speed(void) {
-    char buffer[32];
-    snprintf(buffer, sizeof(buffer), "%06.1f", maximum_speed);
-    send_string(buffer);
-    maximum_speed = 0;
+void print_and_reset_max_dragscroll_speed(void) {
+    float power_of_ten    =   10000000;
+    uint32_t power_of_two = 0x10000000;
+    uint32_t output = 0;
+    int digit;
+    for (int i = 0; i < 8; i++) {
+        digit = (int)(max_speed / power_of_ten);
+        power_of_ten -= digit * power_of_ten;
+        output += digit * power_of_two;
+        power_of_ten /=   10;
+        power_of_two /= 0x10;
+    }
+    send_dword(output);
+    send_string(".");
+    power_of_two = 0x10000000;
+    output = 0;
+    for (int i = 0; i < 8; i++) {
+        digit = (int)(max_speed / power_of_ten);
+        power_of_ten -= digit * power_of_ten;
+        output += digit * power_of_two;
+        power_of_ten /=   10;
+        power_of_two /= 0x10;
+    }
+    send_dword(output);
+    max_speed = 0;
 }
 #endif
 

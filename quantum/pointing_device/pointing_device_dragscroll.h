@@ -74,7 +74,7 @@
 #endif
 
 #ifdef DRAGSCROLL_ACCELERATION
-void print_maximum_speed(void);
+void print_and_reset_max_dragscroll_speed(void);
 #endif
 
 void dragscroll_init(void);
