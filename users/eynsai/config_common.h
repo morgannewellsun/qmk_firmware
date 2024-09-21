@@ -29,7 +29,7 @@
 #define DRAGSCROLL_AXIS_SNAPPING_RATIO 2.0
 #define DRAGSCROLL_ACCELERATION
 #define DRAGSCROLL_ACCELERATION_BLEND 0.872116
-#define DRAGSCROLL_ACCELERATION_SCALE 600.0
+#define DRAGSCROLL_ACCELERATION_SCALE 500.0
 
 // ============================================================================
 // TAPPING TERMS
