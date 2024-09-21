@@ -28,10 +28,9 @@
 
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
 typedef struct {
-    float* items;
+    float items[DRAGSCROLL_SMOOTHING];
     float current_sum;
     size_t current_size;
-    size_t maximum_size;
     size_t next_index;
 } ring_buffer_t;
 
@@ -42,14 +41,14 @@ static void ring_buffer_reset(ring_buffer_t* rb) {
 }
 
 static void ring_buffer_push(ring_buffer_t* rb, float item) {
-    if (rb->current_size == rb->maximum_size) {
+    if (rb->current_size == DRAGSCROLL_SMOOTHING) {
         rb->current_sum -= rb->items[rb->next_index];
     } else {
         rb->current_size++;
     }
     rb->items[rb->next_index] = item;
     rb->current_sum += item;
-    rb->next_index = (rb->next_index + 1) % rb->maximum_size;
+    rb->next_index = (rb->next_index + 1) % DRAGSCROLL_SMOOTHING;
 }
 
 static float ring_buffer_mean(ring_buffer_t* rb) {
@@ -94,7 +93,7 @@ report_mouse_t pre_dragscroll_mouse_report_right = {0};
 #ifdef DRAGSCROLL_ACCELERATION
 float acceleration_const_p;
 float acceleration_const_q;
-const float acceleration_const_r = DRAGSCROLL_ACCELERATION_SCALE;
+float acceleration_const_r;
 #endif
 
 /* core implementation of drag scroll */
@@ -325,22 +324,6 @@ static bool is_dragscroll_axis_snapping_on_task(dragscroll_state_t* d) {
 /* functions used in pointing_device.c */
 
 void dragscroll_init(void) {
-#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-    float* items_h = (float*)malloc(DRAGSCROLL_SMOOTHING_H * sizeof(float));
-    float* items_v = (float*)malloc(DRAGSCROLL_SMOOTHING_V * sizeof(float));
-    dragscroll_state.smoothing_buffer_h.items = items_h;
-    dragscroll_state.smoothing_buffer_v.items = items_v;
-    dragscroll_state.smoothing_buffer_h.maximum_size = DRAGSCROLL_SMOOTHING_H;
-    dragscroll_state.smoothing_buffer_v.maximum_size = DRAGSCROLL_SMOOTHING_V;
-#    if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
-    float* items_h_right = (float*)malloc(DRAGSCROLL_SMOOTHING_H * sizeof(float));
-    float* items_v_right = (float*)malloc(DRAGSCROLL_SMOOTHING_V * sizeof(float));
-    dragscroll_state_right.smoothing_buffer_h.items = items_h_right;
-    dragscroll_state_right.smoothing_buffer_v.items = items_v_right;
-    dragscroll_state_right.smoothing_buffer_h.maximum_size = DRAGSCROLL_SMOOTHING_H;
-    dragscroll_state_right.smoothing_buffer_v.maximum_size = DRAGSCROLL_SMOOTHING_V;
-#    endif
-#endif  // POINTING_DEVICE_HIRES_SCROLL_ENABLE
 #ifdef DRAGSCROLL_ACCELERATION
     if (DRAGSCROLL_ACCELERATION_SCALE > 0) {  // guard against invalid parameters
         acceleration_const_p = DRAGSCROLL_ACCELERATION_BLEND / DRAGSCROLL_ACCELERATION_SCALE;
@@ -348,6 +331,7 @@ void dragscroll_init(void) {
         acceleration_const_p = 0;
     }
     acceleration_const_q = DRAGSCROLL_ACCELERATION_BLEND + 1;
+    acceleration_const_r = DRAGSCROLL_ACCELERATION_SCALE * DRAGSCROLL_THROTTLE_MS;
 #endif
 }
 

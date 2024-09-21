@@ -37,18 +37,11 @@
 #    define DRAGSCROLL_MULTIPLIER_V 0.1
 #endif
 
-#ifndef DRAGSCROLL_SMOOTHING_H
-#    define DRAGSCROLL_SMOOTHING_H 1
+#ifndef DRAGSCROLL_SMOOTHING
+#    define DRAGSCROLL_SMOOTHING 1
 #else
-#    if DRAGSCROLL_SMOOTHING_H < 1
-#        error "DRAGSCROLL_SMOOTHING_H must be a positive integer!"
-#    endif
-#endif
-#ifndef DRAGSCROLL_SMOOTHING_V
-#    define DRAGSCROLL_SMOOTHING_V 1
-#else
-#    if DRAGSCROLL_SMOOTHING_V < 1
-#        error "DRAGSCROLL_SMOOTHING_V must be a positive integer!"
+#    if DRAGSCROLL_SMOOTHING < 1
+#        error "DRAGSCROLL_SMOOTHING must be a positive integer!"
 #    endif
 #endif
 
@@ -73,10 +66,10 @@
 
 #ifdef DRAGSCROLL_ACCELERATION
 #    ifndef DRAGSCROLL_ACCELERATION_SCALE
-#        define DRAGSCROLL_ACCELERATION_SCALE 5.0
+#        define DRAGSCROLL_ACCELERATION_SCALE 10.0
 #    endif
 #    ifndef DRAGSCROLL_ACCELERATION_BLEND
-#        define DRAGSCROLL_ACCELERATION_BLEND 0.5
+#        define DRAGSCROLL_ACCELERATION_BLEND 1.0
 #    endif
 #endif
 
