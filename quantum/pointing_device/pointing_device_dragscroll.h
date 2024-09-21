@@ -73,6 +73,10 @@
 #    endif
 #endif
 
+#ifdef DRAGSCROLL_ACCELERATION
+void print_maximum_speed(void);
+#endif
+
 void dragscroll_init(void);
 void pointing_device_dragscroll(report_mouse_t* mouse_report);
 void dragscroll_on(void);

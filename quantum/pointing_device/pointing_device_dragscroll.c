@@ -17,6 +17,7 @@
 #ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
 #include "timer.h"
 #include "host_driver.h"
@@ -94,6 +95,7 @@ report_mouse_t pre_dragscroll_mouse_report_right = {0};
 float acceleration_const_p;
 float acceleration_const_q;
 float acceleration_const_r;
+float maximum_speed;
 #endif
 
 /* core implementation of drag scroll */
@@ -250,6 +252,7 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
         if (!(h == 0 && v == 0)) {
             // v_out = p * square(min(v_in - r, 0)) + q * (v_in - r) + r
             float speed = sqrt(h * h + v * v);
+            maximum_speed = speed > maximum_speed ? speed : maximum_speed;  // only for printing
             float speed_offset = speed - acceleration_const_r;
             float scale_factor = acceleration_const_q * speed_offset + acceleration_const_r;
             if (speed_offset < 0) {
@@ -331,7 +334,7 @@ void dragscroll_init(void) {
         acceleration_const_p = 0;
     }
     acceleration_const_q = DRAGSCROLL_ACCELERATION_BLEND + 1;
-    acceleration_const_r = DRAGSCROLL_ACCELERATION_SCALE * DRAGSCROLL_THROTTLE_MS;
+    acceleration_const_r = DRAGSCROLL_ACCELERATION_SCALE;
 #endif
 }
 
@@ -365,6 +368,15 @@ void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, repo
 #endif
 
 /* functions to allow the user to control drag scroll */
+
+#ifdef DRAGSCROLL_ACCELERATION
+void print_maximum_speed(void) {
+    char buffer[32];
+    snprintf(buffer, sizeof(buffer), "%06.1f", maximum_speed);
+    send_string(buffer);
+    maximum_speed = 0;
+}
+#endif
 
 void dragscroll_on(void) { dragscroll_on_task(&dragscroll_state); }
 void dragscroll_off(void) { dragscroll_off_task(&dragscroll_state); }
