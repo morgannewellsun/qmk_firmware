@@ -17,6 +17,7 @@
 #ifdef POINTING_DEVICE_DRAGSCROLL_ENABLE
 
 #include <stdlib.h>
+#include <math.h>
 #include "timer.h"
 #include "host_driver.h"
 #include "usb_descriptor_common.h"
@@ -80,10 +81,6 @@ typedef struct {
     bool active;
 } dragscroll_state_t;
 
-#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-float hires_scroll_axis_snapping_threshold;
-#endif
-
 uint32_t last_scroll_time = 0;  // use a single shared timer for throttling
 
 dragscroll_state_t dragscroll_state = {0};
@@ -92,6 +89,12 @@ report_mouse_t pre_dragscroll_mouse_report = {0};
 #if defined(SPLIT_POINTING_ENABLE) && defined(POINTING_DEVICE_COMBINED) && !defined(DRAGSCROLL_APPLIED_AFTER_POINTING_DEVICE_TASK_KB)
 dragscroll_state_t dragscroll_state_right = {0};
 report_mouse_t pre_dragscroll_mouse_report_right = {0};
+#endif
+
+#ifdef DRAGSCROLL_ACCELERATION
+float acceleration_const_p;
+float acceleration_const_q;
+const float acceleration_const_r = DRAGSCROLL_ACCELERATION_SCALE;
 #endif
 
 /* core implementation of drag scroll */
@@ -129,13 +132,8 @@ static void dragscroll_accumulate_task(dragscroll_state_t* d, report_mouse_t* mo
     // scale hires scrolling so that hires and normal scrolling have the same speed
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
     if (is_hires_scroll_on()) {
-        delta_h = ((float)(mouse_report->x)) * DRAGSCROLL_MULTIPLIER_H * pointing_device_get_hires_scroll_resolution();
-        delta_v = ((float)(mouse_report->y)) * DRAGSCROLL_MULTIPLIER_V * pointing_device_get_hires_scroll_resolution();
-    } else {
-#endif
-        delta_h = ((float)(mouse_report->x)) * DRAGSCROLL_MULTIPLIER_H;
-        delta_v = ((float)(mouse_report->y)) * DRAGSCROLL_MULTIPLIER_V;
-#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
+        delta_h = ((float)(mouse_report->x)) * pointing_device_get_hires_scroll_resolution();
+        delta_v = ((float)(mouse_report->y)) * pointing_device_get_hires_scroll_resolution();
     }
 #endif
 
@@ -150,11 +148,9 @@ static void dragscroll_accumulate_task(dragscroll_state_t* d, report_mouse_t* mo
 
 static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_report) {
     if (!(d->active)) { return; }
+
     float h;
     float v;
-#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-    float current_axis_snapping_threshold;
-#endif
 
     // apply smoothing to hires scrolling - don't apply it to normal scrolling since it makes normal scrolling feel unresponsive
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
@@ -204,13 +200,7 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
                 d->axis_snapping_deviation += abs(h) * DRAGSCROLL_AXIS_SNAPPING_RATIO;
                 d->axis_snapping_deviation = d->axis_snapping_deviation > 0 ? 0 : d->axis_snapping_deviation;
             }
-#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-            // hires scrolling requires a larger axis snapping threshold than normal scrolling
-            current_axis_snapping_threshold = is_hires_scroll_on() ? hires_scroll_axis_snapping_threshold : DRAGSCROLL_AXIS_SNAPPING_THRESHOLD;
-            if (abs(d->axis_snapping_deviation) > current_axis_snapping_threshold) {
-#else
             if (abs(d->axis_snapping_deviation) > DRAGSCROLL_AXIS_SNAPPING_THRESHOLD) {
-#endif
                 // switch to the vertical axis
                 h = 0;
                 d->rounding_error_h = 0;
@@ -234,13 +224,7 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
                 d->axis_snapping_deviation += abs(v) * DRAGSCROLL_AXIS_SNAPPING_RATIO;
                 d->axis_snapping_deviation = d->axis_snapping_deviation > 0 ? 0 : d->axis_snapping_deviation;
             }
-#ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-            // hires scrolling requires a larger axis snapping threshold than normal scrolling
-            current_axis_snapping_threshold = is_hires_scroll_on() ? hires_scroll_axis_snapping_threshold : DRAGSCROLL_AXIS_SNAPPING_THRESHOLD;
-            if (abs(d->axis_snapping_deviation) > current_axis_snapping_threshold) {
-#else
             if (abs(d->axis_snapping_deviation) > DRAGSCROLL_AXIS_SNAPPING_THRESHOLD) {
-#endif
                 // switch to the horizontal axis
                 v = 0;
                 d->rounding_error_h = 0;
@@ -256,6 +240,34 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
             }
             break;
     }
+
+    // apply acceleration
+#if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+    if (is_hires_scroll_on()) {
+#elif !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+    if (!is_hires_scroll_on()) {
+#endif
+        if (!(h == 0 && v == 0)) {
+            // v_out = p * square(min(v_in - r, 0)) + q * (v_in - r) + r
+            float speed = sqrt(h * h + v * v);
+            float speed_offset = speed - acceleration_const_r;
+            float scale_factor = acceleration_const_q * speed_offset + acceleration_const_r;
+            if (speed_offset < 0) {
+                scale_factor += acceleration_constant_p * speed_offset * speed_offset;
+            }
+            scale_factor /= speed;
+            h *= scale_factor;
+            v *= scale_factor;
+        }
+#if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+    }
+#elif !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
+    }
+#endif
+
+    // apply scaling
+    h *= DRAGSCROLL_MULTIPLIER_H;
+    v *= DRAGSCROLL_MULTIPLIER_V;
 
     // save rounding errors
     mouse_report->h = (mouse_hv_report_t)h;
@@ -312,7 +324,6 @@ static bool is_dragscroll_axis_snapping_on_task(dragscroll_state_t* d) {
 
 void dragscroll_init(void) {
 #ifdef POINTING_DEVICE_HIRES_SCROLL_ENABLE
-    hires_scroll_axis_snapping_threshold = DRAGSCROLL_AXIS_SNAPPING_THRESHOLD * pointing_device_get_hires_scroll_resolution();
     float* items_h = (float*)malloc(DRAGSCROLL_SMOOTHING_H * sizeof(float));
     float* items_v = (float*)malloc(DRAGSCROLL_SMOOTHING_V * sizeof(float));
     dragscroll_state.smoothing_buffer_h.items = items_h;
@@ -328,6 +339,14 @@ void dragscroll_init(void) {
     dragscroll_state_right.smoothing_buffer_v.maximum_size = DRAGSCROLL_SMOOTHING_V;
 #    endif
 #endif  // POINTING_DEVICE_HIRES_SCROLL_ENABLE
+#ifdef DRAGSCROLL_ACCELERATION
+    if (DRAGSCROLL_ACCELERATION_SCALE > 0) {  // guard against invalid parameters
+        acceleration_constant_p = DRAGSCROLL_ACCELERATION_BLEND / DRAGSCROLL_ACCELERATION_SCALE;
+    } else {
+        acceleration_constant_p = 0;
+    }
+    acceleration_constant_q = DRAGSCROLL_ACCELERATION_BLEND + 1;
+#endif
 }
 
 void pointing_device_dragscroll(report_mouse_t* mouse_report) {
