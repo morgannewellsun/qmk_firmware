@@ -95,9 +95,12 @@ report_mouse_t pre_dragscroll_mouse_report_right = {0};
 float acceleration_const_p;
 float acceleration_const_q;
 float acceleration_const_r;
+#    ifdef SEND_STRING_ENABLE
 bool acceleration_scale_calibration_is_on = false;
 float acceleration_scale_calibration_mean = 0;
 long acceleration_scale_calibration_count = 0;
+float acceleration_scale_calibration_max = 0;
+#    endif
 #endif
 
 /* core implementation of drag scroll */
@@ -262,10 +265,13 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
             scale_factor /= speed;
             h *= scale_factor;
             v *= scale_factor;
+#    ifdef SEND_STRING_ENABLE
             if (acceleration_scale_calibration_is_on) {
                 acceleration_scale_calibration_count += 1;
-                acceleration_scale_calibration_mean += (speed + acceleration_scale_calibration_mean) / acceleration_scale_calibration_count;
+                acceleration_scale_calibration_mean += (speed - acceleration_scale_calibration_mean) / acceleration_scale_calibration_count;
+                acceleration_scale_calibration_max = speed > acceleration_scale_calibration_max ? speed : acceleration_scale_calibration_max;
             }
+#    endif
         }
 #    if defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_ON) && !defined(DRAGSCROLL_ACCELERATION_WHEN_HIRES_SCROLLING_IS_OFF)
     }
@@ -287,6 +293,8 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
 
 #ifdef DRAGSCROLL_ACCELERATION
 static inline void set_acceleration_consts(float blend, float scale) {
+    // multiply by DRAGSCROLL_THROTTLE_MS so that acceleration behaves the same when DRAGSCROLL_THROTTLE_MS is changed
+    scale *= DRAGSCROLL_THROTTLE_MS;
     scale = scale < 0 ? 0 : scale;
     blend = blend < 0 ? 0 : blend;
     blend = blend > 1 ? 1 : blend;
@@ -379,18 +387,20 @@ void pointing_device_dragscroll_combined(report_mouse_t* mouse_report_left, repo
 
 /* functions to allow the user to control drag scroll */
 
-#ifdef DRAGSCROLL_ACCELERATION
+#if defined(DRAGSCROLL_ACCELERATION) && defined(SEND_STRING_ENABLE)
 void start_dragscroll_acceleration_scale_calibration(void) {
     acceleration_scale_calibration_is_on = true;
     acceleration_scale_calibration_mean = 0;
     acceleration_scale_calibration_count = 0;
+    acceleration_scale_calibration_max = 0;
 }
-
 void finish_dragscroll_acceleration_scale_calibration(void) {
     acceleration_scale_calibration_is_on = false;
-    set_acceleration_consts(DRAGSCROLL_ACCELERATION_BLEND, acceleration_scale_calibration_mean);
-    send_string("Set acceleration scale parameter to 0x");
-    send_dword((uint32_t)acceleration_scale_calibration_count);
+    send_string("\nAverage speed: 0x");
+    send_dword((uint32_t)acceleration_scale_calibration_mean / DRAGSCROLL_THROTTLE_MS);  // divide by DRAGSCROLL_THROTTLE_MS to account for multiplication by DRAGSCROLL_THROTTLE_MS in set_acceleration_consts()
+    send_string("\nMaximum speed: 0x");
+    send_dword((uint32_t)acceleration_scale_calibration_max / DRAGSCROLL_THROTTLE_MS);  // divide by DRAGSCROLL_THROTTLE_MS to account for multiplication by DRAGSCROLL_THROTTLE_MS in set_acceleration_consts()
+    send_string("\n");
 }
 #endif
 

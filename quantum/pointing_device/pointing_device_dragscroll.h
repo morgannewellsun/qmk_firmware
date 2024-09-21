@@ -73,7 +73,7 @@
 #    endif
 #endif
 
-#ifdef DRAGSCROLL_ACCELERATION
+#if defined(DRAGSCROLL_ACCELERATION) && defined(SEND_STRING_ENABLE)
 void start_dragscroll_acceleration_scale_calibration(void);
 void finish_dragscroll_acceleration_scale_calibration(void);
 #endif
