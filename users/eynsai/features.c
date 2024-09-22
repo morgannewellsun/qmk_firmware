@@ -423,7 +423,7 @@ void mouse_triggerable_modifier_off(void) {
 // ============================================================================
 
 void wheel_adjustment_pointing_device_task(report_mouse_t* mouse_report) {
-    if (!is_hires_scroll_on() || !is_dragscroll_on()) {
+    if (!is_hires_scroll_on() || is_dragscroll_on()) {
         return;
     }
     mouse_report->h *= pointing_device_get_hires_scroll_resolution();
