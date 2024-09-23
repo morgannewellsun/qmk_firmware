@@ -244,6 +244,10 @@ void rgb_oneshots_off_task(void) {
 // ============================================================================
 
 void sk_base_down_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.n_oneshots_active > 0) {
+        keyboard_state.base_is_locked = true;
+        return;
+    }
     if (keyboard_state.current_base_layer == LAYER_BASE_WORKMAN) {
         keyboard_state.base_is_locked = false;
     } else if (keyboard_state.current_base_layer == LAYER_BASE_QWERTY) {
@@ -260,6 +264,9 @@ void sk_base_down_cb(superkey_state_t* superkey_state) {
 }
 
 void sk_base_up_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.n_oneshots_active > 0) {
+        return;
+    }
     if (keyboard_state.base_is_locked) {
         return;
     } else if (keyboard_state.current_base_layer == LAYER_BASE_WORKMAN) {
@@ -272,6 +279,9 @@ void sk_base_up_cb(superkey_state_t* superkey_state) {
 }
 
 void sk_base_timeout_cb(superkey_state_t* superkey_state) {
+    if (keyboard_state.n_oneshots_active > 0) {
+        return;
+    }
     if (keyboard_state.base_is_locked) {
         return;
     } else if (keyboard_state.current_base_layer == LAYER_BASE_WORKMAN) {
