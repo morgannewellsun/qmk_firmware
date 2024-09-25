@@ -12,6 +12,7 @@ uint32_t last_connection_success_time;
 uint8_t message_queue[QMK_RAW_HID_REPORT_SIZE * MAX_QUEUED_MESSAGES];
 uint8_t message_queue_next_empty_offset = 0;
 
+static uint8_t last_buttons_received = 0;
 static uint8_t last_buttons_sent = 0;
 static bool block_buttons_on = false;
 static bool block_buttons_on_queued = false;
@@ -80,7 +81,11 @@ bool mouse_passthrough_sender_raw_hid_receive_task(uint8_t* data) {
         }
         if (data[REPORT_OFFSET_CONTROL_BLOCK_BUTTONS] > 0) {
             if (!block_buttons_on) {
-                block_buttons_on_queued = true;
+                if (last_buttons_received == 0) {
+                    block_buttons_on = true;
+                } else {
+                    block_buttons_on_queued = true;
+                }
             }
         } else {
             block_buttons_on = false;
@@ -88,7 +93,11 @@ bool mouse_passthrough_sender_raw_hid_receive_task(uint8_t* data) {
         }
         if (data[REPORT_OFFSET_CONTROL_SEND_BUTTONS] == 0) {
             if (send_buttons_on) {
-                send_buttons_off_queued = true;
+                if (last_buttons_received == 0) {
+                    send_buttons_on = false;
+                } else {
+                    send_buttons_off_queued = true;
+                }
             }
         } else {
             send_buttons_on = true;
@@ -146,6 +155,7 @@ bool mouse_passthrough_sender_raw_hid_receive_task(uint8_t* data) {
 }
 
 report_mouse_t mouse_passthrough_sender_pointing_device_task(report_mouse_t mouse) {
+    last_buttons_received = mouse.buttons;
     
     if (state != MOUSE_PASSTHROUGH_REMOTE_CONNECTED) {
         return mouse;

@@ -1,14 +1,14 @@
 #pragma once
 
 // ============================================================================
-// QMK DISABLE FEATURES
+// DISABLE FEATURES
 // ============================================================================
 
 #define NO_ACTION_TAPPING
 #define NO_ACTION_ONESHOT
 
 // ============================================================================
-// QMK POINTING DEVICE
+// MOUSE PASSTHROUGH
 // ============================================================================
 
 #define MOUSE_EXTENDED_REPORT
@@ -30,6 +30,8 @@
 #define DRAGSCROLL_ACCELERATION
 #define DRAGSCROLL_ACCELERATION_BLEND 0.872116
 #define DRAGSCROLL_ACCELERATION_SCALE 500.0
+
+#define MOUSE_DELAY_DURATION 20
 
 // ============================================================================
 // TAPPING TERMS

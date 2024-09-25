@@ -370,6 +370,8 @@ void mouse_triggerable_modifier_pointing_device_task(report_mouse_t* mouse_repor
     }
     if (keyboard_state.mouse_triggerable_modifier_is_active && !keyboard_state.mouse_triggerable_modifier_is_triggered && (mouse_report->buttons != 0 || mouse_report->v != 0 || mouse_report->h != 0)) {
         keyboard_state.mouse_triggerable_modifier_is_triggered = true;
+        keyboard_state.mouse_is_delayed = true;
+        keyboard_state.mouse_delay_start_time = timer_read32();
         switch (keyboard_state.active_mouse_triggerable_modifier) {
             case MOUSE_TRIGGERABLE_MODIFIER_ALT:
                 register_code(KC_LALT);
@@ -383,6 +385,25 @@ void mouse_triggerable_modifier_pointing_device_task(report_mouse_t* mouse_repor
                 register_code(KC_LGUI);
                 superkey_inject_interrupt(SK_GUI, CK_MOUSE_INTERRUPT);
                 break;
+        }
+    }
+    // in order to reliably mod-click, we have to give the modifier some time to reach the OS before we click
+    if (keyboard_state.mouse_is_delayed) {
+        if (timer_elapsed32(keyboard_state.mouse_delay_start_time) > MOUSE_DELAY_DURATION) {
+            keyboard_state.mouse_is_delayed = false;
+            mouse_report->buttons |= keyboard_state.delayed_mouse_buttons;
+            mouse_report->v += keyboard_state.delayed_mouse_wheel_v;
+            mouse_report->h += keyboard_state.delayed_mouse_wheel_h;
+            keyboard_state.delayed_mouse_buttons = 0;
+            keyboard_state.delayed_mouse_wheel_v = 0;
+            keyboard_state.delayed_mouse_wheel_h = 0; 
+        } else {
+            keyboard_state.delayed_mouse_buttons |= mouse_report->buttons;
+            keyboard_state.delayed_mouse_wheel_v += mouse_report->v;
+            keyboard_state.delayed_mouse_wheel_h += mouse_report->h;
+            mouse_report->buttons = 0;
+            mouse_report->v = 0;
+            mouse_report->h = 0;
         }
     }
 }
