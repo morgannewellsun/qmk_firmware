@@ -107,7 +107,7 @@ enum mouse_triggerable_modifiers {
 // ALT ONESHOT AND ARROW LAYER
 // ============================================================================
 
-enum arrow_modifiers {
+enum selective_arrow_modifiers {
     ARROW_MODIFIER_SELECTIVE_ALT = 0,
     ARROW_MODIFIER_SELECTIVE_CTRL,
     ARROW_MODIFIER_SELECTIVE_SHIFT,
@@ -182,7 +182,8 @@ typedef struct keyboard_state_t {
     size_t active_mouse_triggerable_modifier;
 
     // arrows layer
-    bool arrow_modifier_is_active[N_ARROW_MODIFIERS];
+    uint8_t n_selective_modifiers_active;
+    bool selective_modifier_is_active[N_ARROW_MODIFIERS];
     bool arrow_delete_word_left_is_registered;
     bool arrow_delete_word_right_is_registered;
     uint16_t arrow_horizontal_last_keycode_registered;

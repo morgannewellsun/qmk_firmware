@@ -682,7 +682,8 @@ void sk_alt_up_cb(superkey_state_t* superkey_state) {
     intercept_off(INTERCEPT_ARROWS);
 
     // make sure things are cleaned up
-    memset(keyboard_state.arrow_modifier_is_active, 0, sizeof(keyboard_state.arrow_modifier_is_active));
+    keyboard_state.n_selective_modifiers_active = 0;
+    memset(keyboard_state.selective_modifier_is_active, 0, sizeof(keyboard_state.selective_modifier_is_active));
     if (keyboard_state.arrow_delete_word_left_is_registered) {
         keyboard_state.arrow_delete_word_left_is_registered = false;
         unregister_code16(C(KC_BSPC));
@@ -720,7 +721,7 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
         case KC_HOME:
         case KC_END:
             if (pressed) {
-                if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+                if (keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                     keycode = S(keycode);
                 }
                 tap_code16(keycode);
@@ -735,6 +736,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else if (keyboard_state.arrow_horizontal_state != ARROW_STATE_RIGHT && pressed) {
                 keyboard_state.arrow_horizontal_state = ARROW_STATE_RIGHT;
                 update_horizontal = true;
+                if ((keyboard_state.n_selective_modifiers_active > 0) && (keyboard_state.arrow_vertical_state != ARROW_STATE_CENTER)) {
+                    keyboard_state.arrow_vertical_state = ARROW_STATE_CENTER;
+                    update_vertical = true;
+                }
             }
             break;
         case KC_LEFT:
@@ -744,6 +749,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else if (keyboard_state.arrow_horizontal_state != ARROW_STATE_LEFT && pressed) {
                 keyboard_state.arrow_horizontal_state = ARROW_STATE_LEFT;
                 update_horizontal = true;
+                if ((keyboard_state.n_selective_modifiers_active > 0) && (keyboard_state.arrow_vertical_state != ARROW_STATE_CENTER)) {
+                    keyboard_state.arrow_vertical_state = ARROW_STATE_CENTER;
+                    update_vertical = true;
+                }
             }
             break;
         case KC_DOWN:
@@ -753,6 +762,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else if (keyboard_state.arrow_vertical_state != ARROW_STATE_DOWN && pressed) {
                 keyboard_state.arrow_vertical_state = ARROW_STATE_DOWN;
                 update_vertical = true;
+                if ((keyboard_state.n_selective_modifiers_active > 0) && (keyboard_state.arrow_horizontal_state != ARROW_STATE_CENTER)) {
+                    keyboard_state.arrow_horizontal_state = ARROW_STATE_CENTER;
+                    update_horizontal = true;
+                }
             }
             break;
         case KC_UP:
@@ -762,6 +775,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else if (keyboard_state.arrow_vertical_state != ARROW_STATE_UP && pressed) {
                 keyboard_state.arrow_vertical_state = ARROW_STATE_UP;
                 update_vertical = true;
+                if ((keyboard_state.n_selective_modifiers_active > 0) && (keyboard_state.arrow_horizontal_state != ARROW_STATE_CENTER)) {
+                    keyboard_state.arrow_horizontal_state = ARROW_STATE_CENTER;
+                    update_horizontal = true;
+                }
             }
             break;
 
@@ -778,13 +795,16 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
 
         // selective modifier keys
         case CK_SALT:
-            keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT] = pressed;
+            keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT] = pressed;
+            keyboard_state.n_selective_modifiers_active += pressed ? 1 : -1;
             break;
         case CK_SCTL:
-            keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL] = pressed;
+            keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL] = pressed;
+            keyboard_state.n_selective_modifiers_active += pressed ? 1 : -1;
             break;
         case CK_SSFT:
-            keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT] = pressed;
+            keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT] = pressed;
+            keyboard_state.n_selective_modifiers_active += pressed ? 1 : -1;
             break;
 
         // delete-word keys
@@ -835,10 +855,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else {
                 keycode = KC_RIGHT;
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]) {
+            if (keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_CTRL]) {
                 keycode = C(keycode);
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+            if (keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                 keycode = S(keycode);
             }
             register_code16(keycode);
@@ -855,10 +875,10 @@ bool intercept_arrows_cb(uint16_t keycode, bool pressed) {
             } else {
                 keycode = KC_DOWN;
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]) {
+            if (keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_ALT]) {
                 keycode = A(keycode);
             }
-            if (keyboard_state.arrow_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
+            if (keyboard_state.selective_modifier_is_active[ARROW_MODIFIER_SELECTIVE_SHIFT]) {
                 keycode = S(keycode);
             }
             register_code16(keycode);
@@ -943,6 +963,7 @@ void keyboard_post_init_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    mouse_triggerable_modifier_off();
     // earlier intercepts can prevent later intercepts from being called
     // earlier superkey interrupts can't prevent later superkey interrupts from being called
     // intercepts can't prevent superkey interrupts from being called
