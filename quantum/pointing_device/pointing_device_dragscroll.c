@@ -173,13 +173,13 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
     }
 #endif
 
-    // apply any previously recorded rounding errors
-    h += d->rounding_error_h;
-    v += d->rounding_error_v; 
-
     // zero out the accumulators
     d->accumulator_h = 0;
     d->accumulator_v = 0;
+
+    // apply scaling
+    h *= DRAGSCROLL_MULTIPLIER_H;
+    v *= DRAGSCROLL_MULTIPLIER_V;
 
     // apply axis snapping
     switch (d->axis_snapping_state) {
@@ -280,15 +280,17 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
 #    endif
 #endif
 
-    // apply scaling
-    h *= DRAGSCROLL_MULTIPLIER_H;
-    v *= DRAGSCROLL_MULTIPLIER_V;
+    // rounding
+    h += d->rounding_error_h;
+    v += d->rounding_error_v;
+    mouse_hv_report_t h_rounded = (mouse_hv_report_t)h;
+    mouse_hv_report_t v_rounded = (mouse_hv_report_t)v;
+    d->rounding_error_h = h - h_rounded;
+    d->rounding_error_v = v - v_rounded;
 
-    // save rounding errors
-    mouse_report->h = (mouse_hv_report_t)h;
-    mouse_report->v = (mouse_hv_report_t)v;
-    d->rounding_error_h = h - mouse_report->h;
-    d->rounding_error_v = v - mouse_report->v;
+    // output
+    mouse_report->h = h_rounded;
+    mouse_report->v = v_rounded;
 }
 
 #ifdef DRAGSCROLL_ACCELERATION
