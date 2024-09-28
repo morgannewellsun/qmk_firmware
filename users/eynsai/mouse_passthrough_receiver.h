@@ -18,3 +18,4 @@ void mouse_passthrough_send_pointer_on(void);
 void mouse_passthrough_send_pointer_off(void);
 void mouse_passthrough_send_wheel_on(void);
 void mouse_passthrough_send_wheel_off(void);
+void mouse_passthrough_send_reset(void);

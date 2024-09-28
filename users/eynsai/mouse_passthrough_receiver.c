@@ -214,3 +214,14 @@ void mouse_passthrough_send_wheel_off(void) {
         control_state_changed = true;
     }
 }
+
+void mouse_passthrough_send_reset(void) {
+    // send a registration report
+    if (message_queue_next_empty_offset < sizeof(message_queue)) {
+        memset(message_queue + message_queue_next_empty_offset, 0, QMK_RAW_HID_REPORT_SIZE);
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_COMMAND_ID] = RAW_HID_HUB_COMMAND_ID;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_DEVICE_ID] = device_id_remote;
+        message_queue[message_queue_next_empty_offset + REPORT_OFFSET_RESET] = 0x01;
+        message_queue_next_empty_offset += QMK_RAW_HID_REPORT_SIZE;
+    }
+}

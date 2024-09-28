@@ -924,8 +924,11 @@ void sk_gui_up_cb(superkey_state_t* superkey_state) {
     layer_off(LAYER_FUNCTION);
 
     // activate/deactivate oneshot if the key was tapped
-    if (superkey_state->multitap_result != NO_MULTITAP) {
-        reset_keyboard();
+    if (superkey_state->multitap_result == DOUBLE_TAP) {
+        timeout_on(TIMEOUT_RESET_KEYBOARD);
+    } else if (superkey_state->multitap_result == TRIPLE_TAP) {
+        timeout_off(TIMEOUT_RESET_KEYBOARD);
+        mouse_passthrough_send_reset();
     } else if (superkey_state->interrupt_result == NO_INTERRUPT && superkey_state->timeout_result == NO_TIMEOUT) {
         if (keyboard_state.oneshot_is_active[ONESHOT_GUI]) {
             oneshots_off_task();
@@ -936,6 +939,10 @@ void sk_gui_up_cb(superkey_state_t* superkey_state) {
             }
         }
     }
+}
+
+void timeout_reset_keyboard_cb(void) {
+    reset_keyboard();
 }
 
 // ============================================================================
@@ -972,6 +979,7 @@ const size_t n_superkeys = sizeof(superkeys) / sizeof(superkey_t);
 timeout_t timeouts[] = {
     //             IDENTIFIER,                  FUNCTION,                       DURATION
     TIMEOUT_DEFINE(TIMEOUT_UTILITIES_ONESHOT,   &timeout_utilities_oneshot_cb,  DEFAULT_MULTITAP_TERM),
+    TIMEOUT_DEFINE(TIMEOUT_RESET_KEYBOARD,      &timeout_reset_keyboard_cb,     DEFAULT_MULTITAP_TERM),
 };
 const size_t n_timeouts = sizeof(timeouts) / sizeof(timeout_t);
 

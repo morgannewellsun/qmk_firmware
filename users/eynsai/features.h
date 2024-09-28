@@ -151,6 +151,7 @@ enum utilities_oneshot_states {
 
 enum timeouts {
     TIMEOUT_UTILITIES_ONESHOT = 0,
+    TIMEOUT_RESET_KEYBOARD,
 };
 
 // ============================================================================
