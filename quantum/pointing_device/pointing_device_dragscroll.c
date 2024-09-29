@@ -177,10 +177,6 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
     d->accumulator_h = 0;
     d->accumulator_v = 0;
 
-    // apply scaling
-    h *= DRAGSCROLL_MULTIPLIER_H;
-    v *= DRAGSCROLL_MULTIPLIER_V;
-
     // apply axis snapping
     switch (d->axis_snapping_state) {
         case AXIS_SNAPPING_OFF:
@@ -279,6 +275,10 @@ static void dragscroll_scroll_task(dragscroll_state_t* d, report_mouse_t* mouse_
     }
 #    endif
 #endif
+
+    // apply scaling
+    h *= DRAGSCROLL_MULTIPLIER_H;
+    v *= DRAGSCROLL_MULTIPLIER_V;
 
     // rounding
     h += d->rounding_error_h;
