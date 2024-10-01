@@ -998,6 +998,7 @@ void keyboard_post_init_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    mouse_triggerable_modifier_process_record_user_task(keycode);
     // earlier intercepts can prevent later intercepts from being called
     // earlier superkey interrupts can't prevent later superkey interrupts from being called
     // intercepts can't prevent superkey interrupts from being called
@@ -1007,9 +1008,6 @@ bool process_record_user(uint16_t keycode, keyrecord_t *record) {
     }
     if (!superkey_process_record_task(keycode, record->event.pressed)) {
         continue_processing = false;
-    }
-    if (continue_processing) {
-        mouse_triggerable_modifier_process_record_user_task(keycode);
     }
     return continue_processing;
 }
