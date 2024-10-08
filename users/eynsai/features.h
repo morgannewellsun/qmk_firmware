@@ -179,6 +179,7 @@ typedef struct keyboard_state_t {
     // mouse passthrough
     bool mouse_is_delayed;
     uint32_t mouse_delay_start_time;
+    uint8_t mouse_delay_start_buttons;
     uint8_t delayed_mouse_buttons;
     mouse_hv_report_t delayed_mouse_wheel_h;
     mouse_hv_report_t delayed_mouse_wheel_v;

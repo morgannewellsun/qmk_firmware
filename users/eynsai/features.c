@@ -372,6 +372,7 @@ void mouse_triggerable_modifier_pointing_device_task(report_mouse_t* mouse_repor
         keyboard_state.mouse_triggerable_modifier_is_triggered = true;
         keyboard_state.mouse_is_delayed = true;
         keyboard_state.mouse_delay_start_time = timer_read32();
+        keyboard_state.mouse_delay_start_buttons = mouse_report->buttons;
         switch (keyboard_state.active_mouse_triggerable_modifier) {
             case MOUSE_TRIGGERABLE_MODIFIER_ALT:
                 register_code(KC_LALT);
@@ -401,7 +402,7 @@ void mouse_triggerable_modifier_pointing_device_task(report_mouse_t* mouse_repor
             keyboard_state.delayed_mouse_buttons |= mouse_report->buttons;
             keyboard_state.delayed_mouse_wheel_v += mouse_report->v;
             keyboard_state.delayed_mouse_wheel_h += mouse_report->h;
-            mouse_report->buttons = 0;
+            mouse_report->buttons = keyboard_state.mouse_delay_start_buttons;
             mouse_report->v = 0;
             mouse_report->h = 0;
         }
@@ -419,8 +420,8 @@ void mouse_triggerable_modifier_on(size_t mouse_triggerable_modifier) {
         dragscroll_off();
         keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = true;
     }
-    mouse_passthrough_send_buttons_on();
-    mouse_passthrough_block_buttons_on();
+    // mouse_passthrough_send_buttons_on();
+    // mouse_passthrough_block_buttons_on();
     mouse_passthrough_send_wheel_on();
     mouse_passthrough_block_wheel_on();
 }
@@ -448,8 +449,8 @@ void mouse_triggerable_modifier_off(void) {
         dragscroll_on();
         keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = false;
     }
-    mouse_passthrough_send_buttons_off();
-    mouse_passthrough_block_buttons_off();
+    // mouse_passthrough_send_buttons_off();
+    // mouse_passthrough_block_buttons_off();
     mouse_passthrough_send_wheel_off();
     mouse_passthrough_block_wheel_off();
 }
@@ -480,8 +481,8 @@ void wheel_adjustment_pointing_device_task(report_mouse_t* mouse_report) {
 // when oneshots are inactive, the utilities layer is an oneshot that can become persistent
 
 void utilities_oneshot_on_task(void) {
-    mouse_passthrough_send_buttons_on();
-    mouse_passthrough_block_buttons_on();
+    // mouse_passthrough_send_buttons_on();
+    // mouse_passthrough_block_buttons_on();
     mouse_passthrough_send_pointer_on();
     mouse_passthrough_block_pointer_on();
     mouse_passthrough_send_wheel_on();
@@ -494,8 +495,8 @@ void utilities_oneshot_on_task(void) {
 }
 
 void utilities_oneshot_off_task(void) {
-    mouse_passthrough_send_buttons_off();
-    mouse_passthrough_block_buttons_off();
+    // mouse_passthrough_send_buttons_off();
+    // mouse_passthrough_block_buttons_off();
     mouse_passthrough_send_pointer_off();
     mouse_passthrough_block_pointer_off();
     mouse_passthrough_send_wheel_off();
@@ -560,6 +561,7 @@ bool intercept_utilities_oneshot_cb(uint16_t keycode, bool pressed) {
     switch (keycode) {
 
         // exit utilities oneshot
+        case KC_SPC:
         case KC_ENT:
         case KC_BSPC:
             oneshots_off_task();
@@ -998,6 +1000,13 @@ void keyboard_post_init_user(void) {
 }
 
 bool process_record_user(uint16_t keycode, keyrecord_t *record) {
+    if (is_mouse_passthrough_connected()) {
+        mouse_passthrough_send_buttons_on();
+        mouse_passthrough_block_buttons_on();
+    } else {
+        mouse_passthrough_send_buttons_off();
+        mouse_passthrough_block_buttons_off();
+    }
     mouse_triggerable_modifier_process_record_user_task(keycode);
     // earlier intercepts can prevent later intercepts from being called
     // earlier superkey interrupts can't prevent later superkey interrupts from being called
