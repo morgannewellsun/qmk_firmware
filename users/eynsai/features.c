@@ -420,13 +420,38 @@ void mouse_triggerable_modifier_on(size_t mouse_triggerable_modifier) {
         dragscroll_off();
         keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = true;
     }
-    // mouse_passthrough_send_buttons_on();
-    // mouse_passthrough_block_buttons_on();
     mouse_passthrough_send_wheel_on();
     mouse_passthrough_block_wheel_on();
 }
 
 void mouse_triggerable_modifier_off(void) {
+    if (!keyboard_state.mouse_triggerable_modifier_is_active) {
+        return;
+    }
+    keyboard_state.mouse_triggerable_modifier_is_active = false;
+    if (keyboard_state.mouse_triggerable_modifier_is_triggered) {
+        switch (keyboard_state.active_mouse_triggerable_modifier) {
+            case MOUSE_TRIGGERABLE_MODIFIER_ALT:
+                unregister_code(KC_LALT);
+                break;
+            case MOUSE_TRIGGERABLE_MODIFIER_CTRL:
+                unregister_code(KC_LCTL);
+                break;
+            case MOUSE_TRIGGERABLE_MODIFIER_GUI:
+                unregister_code(KC_LGUI);
+                break;
+        }
+        keyboard_state.mouse_triggerable_modifier_is_triggered = false;
+    }
+    if (keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll) {
+        dragscroll_on();
+        keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = false;
+    }
+    mouse_passthrough_send_wheel_off();
+    mouse_passthrough_block_wheel_off();
+}
+
+void mouse_triggerable_modifier_reset(void) {
     if (!keyboard_state.mouse_triggerable_modifier_is_active) {
         return;
     }
@@ -442,22 +467,13 @@ void mouse_triggerable_modifier_off(void) {
                 unregister_code(KC_LGUI);
                 break;
         }
+        keyboard_state.mouse_triggerable_modifier_is_triggered = false;
     }
-    keyboard_state.mouse_triggerable_modifier_is_active = false;
-    keyboard_state.mouse_triggerable_modifier_is_triggered = false;
-    if (keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll) {
-        dragscroll_on();
-        keyboard_state.mouse_triggerable_modifier_interrupted_dragscroll = false;
-    }
-    // mouse_passthrough_send_buttons_off();
-    // mouse_passthrough_block_buttons_off();
-    mouse_passthrough_send_wheel_off();
-    mouse_passthrough_block_wheel_off();
 }
 
 void mouse_triggerable_modifier_process_record_user_task(uint16_t keycode) {
     if (!(keycode == KC_LSFT || keycode == KC_RSFT)) {
-        mouse_triggerable_modifier_off();
+        mouse_triggerable_modifier_reset();
     }
 }
 
@@ -481,8 +497,6 @@ void wheel_adjustment_pointing_device_task(report_mouse_t* mouse_report) {
 // when oneshots are inactive, the utilities layer is an oneshot that can become persistent
 
 void utilities_oneshot_on_task(void) {
-    // mouse_passthrough_send_buttons_on();
-    // mouse_passthrough_block_buttons_on();
     mouse_passthrough_send_pointer_on();
     mouse_passthrough_block_pointer_on();
     mouse_passthrough_send_wheel_on();
@@ -495,8 +509,6 @@ void utilities_oneshot_on_task(void) {
 }
 
 void utilities_oneshot_off_task(void) {
-    // mouse_passthrough_send_buttons_off();
-    // mouse_passthrough_block_buttons_off();
     mouse_passthrough_send_pointer_off();
     mouse_passthrough_block_pointer_off();
     mouse_passthrough_send_wheel_off();
