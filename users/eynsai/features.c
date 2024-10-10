@@ -528,6 +528,9 @@ void sk_ctrl_down_cb(superkey_state_t* superkey_state) {
     if (keyboard_state.n_oneshots_active > 0) {
         keyboard_state.utilities_momentary_mode_is_on = true;
         layer_on(LAYER_UTILITIES);
+        if (keyboard_state.oneshot_is_active[ONESHOT_CTRL]) {
+            intercept_on(INTERCEPT_CTRL);
+        }
     } else {
         keyboard_state.utilities_momentary_mode_is_on = false;
         intercept_on(INTERCEPT_CTRL);
@@ -536,10 +539,10 @@ void sk_ctrl_down_cb(superkey_state_t* superkey_state) {
 
 void sk_ctrl_up_cb(superkey_state_t* superkey_state) {
     mouse_triggerable_modifier_off();
+    intercept_off(INTERCEPT_CTRL);
     if (keyboard_state.utilities_momentary_mode_is_on) {
         layer_off(LAYER_UTILITIES);
     } else {
-        intercept_off(INTERCEPT_CTRL);
         clear_keyboard();
     }
     if (superkey_state->interrupt_result == NO_INTERRUPT && superkey_state->timeout_result == NO_TIMEOUT) {
